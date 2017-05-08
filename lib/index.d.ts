@@ -1,6 +1,5 @@
-/**
- * console.log(message, message2) => "message message2"
- * prefixedConsole.log(message, message2) => "category | message message2"
- *
- */
-export declare function prefix(category: string, target?: Console, separator?: string): Console;
+export declare type logFragment = string | (() => string);
+export interface DasLog extends Console {
+    add: (fragment: logFragment) => DasLog;
+}
+export declare function prefix(fragment: string, target?: Console, separator?: string): DasLog;
