@@ -1,0 +1,30 @@
+{
+  "name": "daslog",
+  "version": "0.0.1",
+  "description": "stupid simple logging based on prefixes",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paarthenon/daslog.git"
+  },
+  "keywords": [
+    "log",
+    "console"
+  ],
+  "author": "Paarth",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/paarthenon/daslog/issues"
+  },
+  "homepage": "https://github.com/paarthenon/daslog#readme",
+  "devDependencies": {
+    "typescript": "^2.3.2"
+  }
+}
