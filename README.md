@@ -50,4 +50,7 @@ const appLogger = prefix('Application')
 appLogger.log('Hello World');
 ```
 prints
-`Application | 2:19:30 AM | Hello World`
+```
+Application | 2:19:30 AM | Hello World
+```
+
