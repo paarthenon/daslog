@@ -1,72 +1,98 @@
-const logFuncs = new Set(['fatal','error','warn','log','info','debug','trace']);
+export type LogFragment = string | ((...args:any[]) => string)
 
-const DAS_PROPS_KEY = '_dasProps';
-export type LogFragment = string | (() => string);
-
-export interface DasLog extends Console {
-	add: (...fragments:LogFragment[]) => DasLog
+export interface LogLevels {
+    [level:string]: number
 }
 
-interface InternalDasLog extends DasLog {
-	_dasProps:DasProps
-}
-
-interface DasProps {
-	original:Console
-	chain:Array<LogFragment>
-	separator:string
-}
-
-function add(...fragments:LogFragment[]):DasLog {
-	let props:DasProps = this[DAS_PROPS_KEY];
-	return buildProxy({...props, chain:[...props.chain, ...fragments]});
+export type LogFuncs<T> = {
+    [P in keyof T]: (...args:any[]) => void
 }
 
 function isFunction(x:any) : x is Function {
-	return typeof(x) === 'function';
+    return typeof(x) === 'function';
 }
 
-function buildProxy(props:DasProps):DasLog {
-	return new Proxy<DasLog>({...console, add, [DAS_PROPS_KEY]:props}, {
-		get: (target:InternalDasLog, name:keyof Console) => {
-			if (isFunction(target[name]) && logFuncs.has(name)) {
-				return (...args:any[]) => {
-					const combined = target._dasProps.chain
-						.map(fragment => (isFunction(fragment) ? fragment() : fragment))
-						.join(` ${target._dasProps.separator} `)
-					return target[name].apply(target, [combined, target._dasProps.separator, ...args]);
-				}
-			} else {
-				return target[name];
-			}
-		}
-	});
+export type LogGenerator = (fragments: LogFragment[]) => (...args:any[]) => void;
+
+interface DasMeta<L extends LogLevels> {
+    chain: LogFragment[]
+    levels: L
+    logGenerator: LogGenerator
 }
 
-function isDasLog(x:Console):x is InternalDasLog {
-	return DAS_PROPS_KEY in x;
+const defaultLevels = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+    fatal: 4,
 }
 
-function getOriginal(target:Console) {
-	if (isDasLog(target)) {
-		return target._dasProps.original;
-	} else {
-		return target;
-	}
+const defaultLogGen :LogGenerator = (fragments, separator = '|') => {
+    // dirty hack to force console.log to call a .toString function. This is necessary to simultaneously allow for
+    // - time sensitive function calls (like using the current time in a prefix);
+    // - console logs with accurate line numbers
+    let combined:any = function(){};
+    combined.toString = function() {
+        return fragments
+            .map(fragment => (isFunction(fragment) ? fragment() : fragment))
+            .join(` ${separator} `);
+    }
+
+    return console.log.bind(console, ...(fragments.length > 0)?['%s', combined, separator]:[]);
 }
 
-function getChain(target:Console) {
-	if (isDasLog(target)) {
-		return target._dasProps.chain;
-	} else {
-		return [];
-	}
+const defaultMeta: DasMeta<{}> = {
+    chain: [],
+    levels: {},
+    logGenerator: defaultLogGen,
 }
 
-export function prefix(fragment:string, target=console, separator='|') :DasLog {
-	return buildProxy({
-		original: getOriginal(target),
-		chain: [fragment, ...getChain(target)],
-		separator,
-	});
+const template:DasLogger<{}> = {
+    add,
+    prefix,
+    setLevels,
+    setAppender,
 }
+
+function add<L extends LogLevels>(...fragments: LogFragment[]): DasLogger<L> {
+    const _dasMeta: DasMeta<L> = this._dasMeta;
+    return build<L>({..._dasMeta, chain: [..._dasMeta.chain, ...fragments]});
+}
+function prefix<L extends LogLevels>(...fragments: LogFragment[]): DasLogger<L> {
+    const _dasMeta: DasMeta<L> = this._dasMeta;
+    return build<L>({..._dasMeta, chain: [...fragments, ..._dasMeta.chain]})
+}
+function setLevels<L extends LogLevels>(levels:L): DasLogger<L> {
+    const _dasMeta: DasMeta<L> = this._dasMeta;
+    return build<L>({..._dasMeta, levels});
+}
+function setAppender<L extends LogLevels>(logGenerator: LogGenerator) : DasLogger<L> {
+    const _dasMeta: DasMeta<L> = this._dasMeta;
+    return build<L>({..._dasMeta, logGenerator});
+}
+
+export type DasLogger<L extends LogLevels> = {
+    add: (...fragments: LogFragment[]) => DasLogger<L>
+    prefix: (...fragments: LogFragment[]) => DasLogger<L>
+    setLevels: <T extends LogLevels>(levels:T) => DasLogger<T>
+    setAppender: (logGenerator: LogGenerator) => DasLogger<L>
+} & LogFuncs<L>
+
+function funcify<L extends LogLevels>(meta: DasMeta<L>) {
+    return Object.keys(meta.levels).reduce((result, key) => {
+        result[key] = meta.logGenerator(meta.chain);
+        return result;
+    }, {} as LogFuncs<L>);
+}
+
+function build<L extends LogLevels = {}>(_dasMeta:DasMeta<{}> = defaultMeta) : DasLogger<L> {
+    const untypedLevelFuncs:any = funcify(_dasMeta);
+    return {
+        ...template,
+        _dasMeta,
+        ...untypedLevelFuncs,
+    }
+}
+
+export const defaultLogger = build().setLevels(defaultLevels);
