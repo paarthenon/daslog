@@ -1,56 +1,11 @@
 # daslog
-dumb as s*** logging
 
-For when you want logging category prefixes and don't care about anything else. Daslog wraps the console object and does not support appenders but provides a fair bit of flexibility. 
+Other loggers I tried:
+ * were intended for node.js and used runtime require statements, which did not play well with bundlers
+ * did not maintain line numbers when running in a browser console
+ * did not support hierarchical categories
+ * supported custom log levels but did not expose that type information (which doesn't help when you work in typescript).
 
-## Use
+Daslog is a fun little project that solves these problems for me. It's not an enterprise level logging tool and isn't really meant to be.
 
-### Basic
-```
-import {prefix} from 'daslog'
-
-const logger = prefix('Application');
-
-logger.log('hello')
-
-```
-
-prints
-```
-Application | hello
-```
-
-### Tiered
-```
-import {prefix} from 'daslog'
-
-const appLogger = prefix('Application');
-
-appLogger.log('Initializing')
-
-function utilityFunction() {
-    const utilLogger = appLogger.add('Utils');
-    
-    utilLogger.log('Calculating');
-}
-```
-prints
-```
-Application | Initializing
-Application | Utils | Calculating
-```
-
-### Functions
-```
-import {prefix} from 'daslog'
-
-const appLogger = prefix('Application')
-    .add(() => (new Date()).toLocaleTimeString());
-        
-appLogger.log('Hello World');
-```
-prints
-```
-Application | 2:19:30 AM | Hello World
-```
-
+Daslog was originally short for 'dumb as s*** log'. The earliest version was a single prefix function that proxied the console object with a category-like prefix I wrote out of frustration with getting other logging frameworks to work.
