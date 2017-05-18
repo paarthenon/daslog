@@ -2,6 +2,7 @@
  * Daslog supports loading prefixes as strings or string thunks
  */
 export declare type LogFragment = string | ((...args: any[]) => string);
+export declare type LogFunction = (...args: any[]) => void;
 /**
  * Log levels are specified as an object mapping level names to numbers.
  *
@@ -22,12 +23,12 @@ export interface LogLevels {
  * Log levels tied to function names
  */
 export declare type LogFuncs<T extends LogLevels> = {
-    [P in keyof T]: (...args: any[]) => void;
+    [P in keyof T]: LogFunction;
 };
 /**
  * A factory function to consume the prefix fragments and assemble the
  */
-export declare type AppenderFactory = (fragments: LogFragment[]) => (...args: any[]) => void;
+export declare type AppenderFactory = (fragments: LogFragment[]) => LogFunction;
 /**
  * A logger constructed of several management functions and the levels specific logging functions
  */
@@ -66,4 +67,9 @@ declare let defaultLogger: DasLogger<{
     fatal: number;
 }>;
 export default defaultLogger;
-export declare function updateDefaultLogger(newLogger: DasLogger<any>): void;
+/**
+ * Destructively update the default logger by clearing the object then incorporating all the properties
+ * of the new logger.
+ * @param newLogger
+ */
+export declare function updateDefaultLogger<L extends LogLevels>(newLogger: DasLogger<L>): void;
