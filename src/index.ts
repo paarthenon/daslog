@@ -28,10 +28,13 @@ export type LogFuncs<T extends LogLevels> = {
     [P in keyof T]: LogFunction
 }
 
+export interface AppenderFactoryMeta {
+    logLevelName: string
+}
 /**
  * A factory function to consume the prefix fragments and assemble the 
  */
-export type AppenderFactory = (fragments: LogFragment[]) => LogFunction;
+export type AppenderFactory = (appenderMeta: AppenderFactoryMeta, fragments: LogFragment[]) => LogFunction;
 
 /**
  * A logger constructed of several management functions and the levels specific logging functions
@@ -88,9 +91,9 @@ function toStringHackFactory(toStringFunc:() => string) {
     return func;
 }
 
-const defaultConsoleAppender: AppenderFactory = (fragments, separator = '|') => {
+const defaultConsoleAppender: AppenderFactory = (meta, fragments, separator = '|') => {
     let combined = toStringHackFactory(function() {
-        return fragments
+        return [meta.logLevelName, ...fragments]
             .map(fragment => (isFunction(fragment) ? fragment() : fragment))
             .join(` ${separator} `);
     });
@@ -120,11 +123,11 @@ const defaultMeta: DasMeta<typeof log4jLevels> = {
  * @param meta - The DasMeta object for the 
  */
 function funcify<L extends LogLevels>(meta: DasMeta<L>) {
-    return Object.keys(meta.levels).reduce((result, key) => {
-        result[key] = 
-            (meta.minimumLogLevel && meta.minimumLogLevel > meta.levels[key])
+    return Object.keys(meta.levels).reduce((result, levelName) => {
+        result[levelName] = 
+            (meta.minimumLogLevel && meta.minimumLogLevel > meta.levels[levelName])
                 ? () => {}
-                : meta.appenderFactory(meta.chain)
+                : meta.appenderFactory({logLevelName: levelName}, meta.chain)
         return result;
     }, {} as LogFuncs<L>);
 }

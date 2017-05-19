@@ -25,10 +25,13 @@ export interface LogLevels {
 export declare type LogFuncs<T extends LogLevels> = {
     [P in keyof T]: LogFunction;
 };
+export interface AppenderFactoryMeta {
+    logLevelName: string;
+}
 /**
  * A factory function to consume the prefix fragments and assemble the
  */
-export declare type AppenderFactory = (fragments: LogFragment[]) => LogFunction;
+export declare type AppenderFactory = (appenderMeta: AppenderFactoryMeta, fragments: LogFragment[]) => LogFunction;
 /**
  * A logger constructed of several management functions and the levels specific logging functions
  */
