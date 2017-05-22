@@ -1,7 +1,22 @@
+export interface LogSigil<T extends string = string> {
+    type: 'daslog-sigil',
+    value: T,
+}
+
+function sigil<T extends string>(key:T): LogSigil<T> {
+    return {
+        type: 'daslog-sigil',
+        value: key,
+    }
+}
+
+export const sigils = {
+    level: sigil('level')
+}
 /**
  * Daslog supports loading prefixes as strings or string thunks
  */
-export type LogFragment = string | ((...args:any[]) => string)
+export type LogFragment = string | ((...args:any[]) => string) | LogSigil
 export type LogFunction = (...args:any[]) => void
 
 /**
@@ -91,9 +106,21 @@ function toStringHackFactory(toStringFunc:() => string) {
     return func;
 }
 
+function isSigil(x:any): x is LogSigil {
+    return x.type && x.type === 'daslog-sigil';
+}
+
+export function processSigil(meta:AppenderFactoryMeta, sigil:LogSigil) {
+    switch (sigil.value) {
+        case sigils.level.value:
+            return meta.logLevelName;
+    }
+    return sigil;
+}
 const defaultConsoleAppender: AppenderFactory = (meta, fragments, separator = '|') => {
     let combined = toStringHackFactory(function() {
-        return [meta.logLevelName, ...fragments]
+        return fragments
+            .map(fragment => (isSigil(fragment)) ? processSigil(meta, fragment) : fragment)
             .map(fragment => (isFunction(fragment) ? fragment() : fragment))
             .join(` ${separator} `);
     });

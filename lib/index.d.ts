@@ -1,7 +1,14 @@
+export interface LogSigil<T extends string = string> {
+    type: 'daslog-sigil';
+    value: T;
+}
+export declare const sigils: {
+    level: LogSigil<"level">;
+};
 /**
  * Daslog supports loading prefixes as strings or string thunks
  */
-export declare type LogFragment = string | ((...args: any[]) => string);
+export declare type LogFragment = string | ((...args: any[]) => string) | LogSigil;
 export declare type LogFunction = (...args: any[]) => void;
 /**
  * Log levels are specified as an object mapping level names to numbers.
@@ -48,6 +55,7 @@ export interface DasMeta<L extends LogLevels> {
     minimumLogLevel?: number;
     appenderFactory: AppenderFactory;
 }
+export declare function processSigil(meta: AppenderFactoryMeta, sigil: LogSigil): string | LogSigil<string>;
 export declare const log4jLevels: {
     trace: number;
     debug: number;

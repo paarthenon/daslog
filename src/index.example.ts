@@ -1,7 +1,12 @@
 import defaultLog, * as das from './index'
 
 defaultLog.warn('warn message'); // >warn message
-defaultLog.add('Category').info('category 1'); // >Category | category 1
+const categoryLogger = defaultLog
+    .add(das.sigils.level)
+    .add('Category');
+
+categoryLogger.info('category 1') // >Category | category 1
+categoryLogger.warn('category 2')
 
 const sampleLogger = das.logger()
     .add('New Default')
