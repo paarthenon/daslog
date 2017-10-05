@@ -8,7 +8,6 @@
         "noImplicitReturns": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "outDir": "lib",
         "sourceMap": false
     },
     "include": [

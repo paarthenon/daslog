@@ -1,14 +1,4 @@
-export interface LogSigil<T extends string = string> {
-    type: 'daslog-sigil',
-    value: T,
-}
-
-function sigil<T extends string>(key:T): LogSigil<T> {
-    return {
-        type: 'daslog-sigil',
-        value: key,
-    }
-}
+import {LogSigil, sigil} from './sigil'
 
 export const sigils = {
     level: sigil('level')

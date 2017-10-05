@@ -8,7 +8,7 @@
     "lib"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "webpack",
     "example": "node ./lib/index.example"
   },
   "repository": {
@@ -26,8 +26,12 @@
   },
   "homepage": "https://github.com/paarthenon/daslog#readme",
   "devDependencies": {
-    "typescript": "^2.4.0-dev.20170516"
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-es2015": "^6.24.1",
+    "ts-loader": "^2.3.7",
+    "typescript": "^2.4.0-dev.20170516",
+    "webpack": "^3.6.0"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }
