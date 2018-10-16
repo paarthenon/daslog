@@ -62,31 +62,34 @@ export type DasLogger<L extends LogLevels> = {
     setAppender: (logGenerator: AppenderFactory) => DasLogger<L>
 } & LogFuncs<L>
 
+
 export interface DasMeta<L extends LogLevels> {
     chain: LogFragment[]
     levels: L
     minimumLogLevel?: number
     appenderFactory: AppenderFactory
 }
+const DasMetaSymbol = Symbol('DASLogger metadata');
+type InternalDasLogger<L extends LogLevels> = DasLogger<L> &  {[DasMetaSymbol]: DasMeta<L>};
 
-function add<L extends LogLevels>(...fragments: LogFragment[]): DasLogger<L> {
-    const _dasMeta: DasMeta<L> = this._dasMeta;
+function add<L extends LogLevels>(this: InternalDasLogger<L>, ...fragments: LogFragment[]): DasLogger<L> {
+    const _dasMeta = this[DasMetaSymbol];
     return logger<L>({..._dasMeta, chain: [..._dasMeta.chain, ...fragments]});
 }
-function prefix<L extends LogLevels>(...fragments: LogFragment[]): DasLogger<L> {
-    const _dasMeta: DasMeta<L> = this._dasMeta;
+function prefix<L extends LogLevels>(this: InternalDasLogger<L>, ...fragments: LogFragment[]): DasLogger<L> {
+    const _dasMeta = this[DasMetaSymbol];
     return logger<L>({..._dasMeta, chain: [...fragments, ..._dasMeta.chain]})
 }
-function setLevels<L extends LogLevels>(levels:L): DasLogger<L> {
-    const _dasMeta: DasMeta<L> = this._dasMeta;
+function setLevels<L extends LogLevels>(this: InternalDasLogger<L>, levels:L): DasLogger<L> {
+    const _dasMeta = this[DasMetaSymbol];
     return logger<L>({..._dasMeta, levels});
 }
-function setMinimumLogLevel<L extends LogLevels>(minimumLogLevel: keyof L): DasLogger<L> {
-    const _dasMeta: DasMeta<L> = this._dasMeta;
+function setMinimumLogLevel<L extends LogLevels>(this: InternalDasLogger<L>, minimumLogLevel: keyof L): DasLogger<L> {
+    const _dasMeta = this[DasMetaSymbol];
     return logger<L>({..._dasMeta, minimumLogLevel: _dasMeta.levels[minimumLogLevel]});
 }
-function setAppender<L extends LogLevels>(appenderFactory: AppenderFactory) : DasLogger<L> {
-    const _dasMeta: DasMeta<L> = this._dasMeta;
+function setAppender<L extends LogLevels>(this: InternalDasLogger<L>, appenderFactory: AppenderFactory) : DasLogger<L> {
+    const _dasMeta = this[DasMetaSymbol];
     return logger<L>({..._dasMeta, appenderFactory});
 }
 
@@ -172,7 +175,7 @@ export function logger<L extends LogLevels = typeof log4jLevels>(meta:Partial<Da
         setLevels,
         setAppender,
         setMinimumLogLevel,
-        _dasMeta,
+        [DasMetaSymbol]: _dasMeta,
         ...untypedLevelFuncs,
     }
 }
