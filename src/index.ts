@@ -73,24 +73,24 @@ const DasMetaSymbol = Symbol('DASLogger metadata');
 type InternalDasLogger<L extends LogLevels> = DasLogger<L> &  {[DasMetaSymbol]: DasMeta<L>};
 
 function add<L extends LogLevels>(this: InternalDasLogger<L>, ...fragments: LogFragment[]): DasLogger<L> {
-    const _dasMeta = this[DasMetaSymbol];
-    return logger<L>({..._dasMeta, chain: [..._dasMeta.chain, ...fragments]});
+    const meta = this[DasMetaSymbol];
+    return logger<L>({...meta, chain: [...meta.chain, ...fragments]});
 }
 function prefix<L extends LogLevels>(this: InternalDasLogger<L>, ...fragments: LogFragment[]): DasLogger<L> {
-    const _dasMeta = this[DasMetaSymbol];
-    return logger<L>({..._dasMeta, chain: [...fragments, ..._dasMeta.chain]})
+    const meta = this[DasMetaSymbol];
+    return logger<L>({...meta, chain: [...fragments, ...meta.chain]})
 }
 function setLevels<L extends LogLevels>(this: InternalDasLogger<L>, levels:L): DasLogger<L> {
-    const _dasMeta = this[DasMetaSymbol];
-    return logger<L>({..._dasMeta, levels});
+    const meta = this[DasMetaSymbol];
+    return logger<L>({...meta, levels});
 }
 function setMinimumLogLevel<L extends LogLevels>(this: InternalDasLogger<L>, minimumLogLevel: keyof L): DasLogger<L> {
-    const _dasMeta = this[DasMetaSymbol];
-    return logger<L>({..._dasMeta, minimumLogLevel: _dasMeta.levels[minimumLogLevel]});
+    const meta = this[DasMetaSymbol];
+    return logger<L>({...meta, minimumLogLevel: meta.levels[minimumLogLevel]});
 }
 function setAppender<L extends LogLevels>(this: InternalDasLogger<L>, appenderFactory: AppenderFactory) : DasLogger<L> {
-    const _dasMeta = this[DasMetaSymbol];
-    return logger<L>({..._dasMeta, appenderFactory});
+    const meta = this[DasMetaSymbol];
+    return logger<L>({...meta, appenderFactory});
 }
 
 function isFunction(x:any) : x is Function {
