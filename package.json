@@ -1,6 +1,6 @@
 {
   "name": "daslog",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "stupid simple logging based on prefixes",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepack": "npm run build",
     "example": "node ./lib/index.example"
   },
   "repository": {

@@ -24,3 +24,39 @@ This logger
     * and subcategories that can be stacked indefinitely
     * categories and subcategories can be string thunks that will be executed at the time of logging
  * Is designed to be immutable and creates new logger instances leaving the old loggers in place.
+
+
+A short example of the kind of thing you can do:
+```typescript
+import defaultLog, * as das from './index'
+
+defaultLog.warn('warn message'); // >warn message
+const categoryLogger = defaultLog
+    .add(das.sigils.level)
+    .add('Category');
+
+categoryLogger.info('category 1') // >Category | category 1
+categoryLogger.warn('category 2')
+
+const sampleLogger = das.logger()
+    .add('New Default')
+    .add(() => (new Date()).toLocaleTimeString())
+
+das.updateDefaultLogger(sampleLogger);
+
+defaultLog.warn('new message?'); // >New Default | 10:25:43 AM | new message?
+
+
+const log1 = das.logger().add("Log1")
+
+const newLevels = {
+    human: 0,
+    saiyan: 1,
+    superSaiyan: 2,
+}
+
+const dbzLog = log1.setLevels(newLevels).add('DbzLog');
+
+dbzLog.human('human hello');
+dbzLog.superSaiyan('super say hello');
+```
