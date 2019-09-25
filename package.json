@@ -1,9 +1,9 @@
 {
   "name": "daslog",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "stupid simple logging based on prefixes",
   "main": "lib/index.js",
-  "typings": "lib/index.d.ts",
+  "types": "lib/index.d.ts",
   "files": [
     "lib"
   ],
@@ -20,13 +20,13 @@
     "console"
   ],
   "author": "Paarth",
-  "license": "MIT",
+  "license": "MPL-2.0",
   "bugs": {
     "url": "https://github.com/paarthenon/daslog/issues"
   },
   "homepage": "https://github.com/paarthenon/daslog#readme",
   "devDependencies": {
-    "typescript": "^3.1.1"
+    "typescript": "^3.6.3"
   },
   "dependencies": {}
 }

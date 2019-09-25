@@ -153,7 +153,7 @@ const defaultMeta: DasMeta<typeof log4jLevels> = {
  * @param meta - The DasMeta object for the 
  */
 function funcify<L extends LogLevels>(meta: DasMeta<L>) {
-    return Object.keys(meta.levels).reduce((result, levelName) => {
+    return Object.keys(meta.levels).reduce((result, levelName: keyof L & string) => {
         result[levelName] = 
             (meta.minimumLogLevel && meta.minimumLogLevel > meta.levels[levelName])
                 ? () => {}
