@@ -1,6 +1,6 @@
 {
   "name": "daslog",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "stupid simple logging based on prefixes",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
