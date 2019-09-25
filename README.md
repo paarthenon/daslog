@@ -28,6 +28,13 @@ This logger
 
 A short example of the kind of thing you can do:
 ```typescript
+// this is more what we're looking at.
+export const log1 = logger()
+    .reformat(([level]) => [Sigil.Category('hi'), level])
+    .setMinimumLogLevel('warn');
+
+// Unfortunately this is no longer valid. Will be replacing this very shortly.
+
 import defaultLog, * as das from './index'
 
 defaultLog.warn('warn message'); // >warn message

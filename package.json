@@ -29,5 +29,7 @@
   "devDependencies": {
     "typescript": "^3.6.3"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@paarth/variant": "0.0.1"
+  }
 }

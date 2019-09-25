@@ -1,23 +1,23 @@
-export interface LogSigil<T extends string = string> {
-    type: 'daslog-sigil',
-    value: T,
-}
+import sigil, {Variant, exhaust} from '@paarth/variant';
 
-function sigil<T extends string>(key:T): LogSigil<T> {
-    return {
-        type: 'daslog-sigil',
-        value: key,
-    }
-}
+export module Sigil {
+    export const Level = sigil('LEVEL');
+    export type Level = ReturnType<typeof Level>;
 
-export const sigils = {
-    level: sigil('level')
+    export const Category = sigil('CATEGORY', (name: string) => ({
+        name,
+        setName(name: string) {
+            this.name = name;
+        },
+    }));
+    export type Category = ReturnType<typeof Category>;
+
+    export const Time = sigil('TIME', (format: string) => ({format}));
+    export type Time = ReturnType<typeof Time>;
 }
-/**
- * Daslog supports loading prefixes as strings or string thunks
- */
-export type LogFragment = string | ((...args:any[]) => string) | LogSigil
-export type LogFunction = (...args:any[]) => void
+export type Sigil = Variant<typeof Sigil>;
+
+export type LogFunction = (...args: any[]) => void
 
 /**
  * Log levels are specified as an object mapping level names to numbers.
@@ -33,7 +33,7 @@ export type LogFunction = (...args:any[]) => void
  * }
  */
 export interface LogLevels {
-    [level:string]: number
+    [level: string]: number
 }
 
 /**
@@ -49,53 +49,37 @@ export interface AppenderFactoryMeta {
 /**
  * A factory function to consume the prefix fragments and assemble the 
  */
-export type AppenderFactory = (appenderMeta: AppenderFactoryMeta, fragments: LogFragment[]) => LogFunction;
+export type AppenderFactory = (appenderMeta: AppenderFactoryMeta, chain: SigilChain) => LogFunction;
 
 /**
  * A logger constructed of several management functions and the levels specific logging functions
  */
-export type DasLogger<L extends LogLevels> = {
-    add: (...fragments: LogFragment[]) => DasLogger<L>
-    prefix: (...fragments: LogFragment[]) => DasLogger<L>
-    setLevels: <T extends LogLevels>(levels:T) => DasLogger<T>
-    setMinimumLogLevel: (minimumLogLevel: keyof L) => DasLogger<L>
-    setAppender: (logGenerator: AppenderFactory) => DasLogger<L>
+export type DasLogger<L extends LogLevels, C extends SigilChain> = {
+    reformat<R extends SigilChain>(f: (x: C) => R): DasLogger<L, R>
+    setLevels: <T extends LogLevels>(levels:T) => DasLogger<T, C>
+    setMinimumLogLevel: (minimumLogLevel: keyof L) => DasLogger<L, C>
+    setAppender: (logGenerator: AppenderFactory) => DasLogger<L, C>
 } & LogFuncs<L>
 
 
-export interface DasMeta<L extends LogLevels> {
-    chain: LogFragment[]
+type BaseSigilChain = 
+    | [Sigil]
+    | [Sigil, Sigil]
+    | [Sigil, Sigil, Sigil]
+    | [Sigil, Sigil, Sigil, Sigil]
+    | [Sigil, Sigil, Sigil, Sigil, Sigil]
+;
+
+type SigilChain = Readonly<BaseSigilChain>;
+
+export interface DasMeta<L extends LogLevels, C extends SigilChain> {
+    chain: C
     levels: L
     minimumLogLevel?: number
     appenderFactory: AppenderFactory
 }
 const DasMetaSymbol = Symbol('DASLogger metadata');
-type InternalDasLogger<L extends LogLevels> = DasLogger<L> &  {[DasMetaSymbol]: DasMeta<L>};
-
-function add<L extends LogLevels>(this: InternalDasLogger<L>, ...fragments: LogFragment[]): DasLogger<L> {
-    const meta = this[DasMetaSymbol];
-    return logger<L>({...meta, chain: [...meta.chain, ...fragments]});
-}
-function prefix<L extends LogLevels>(this: InternalDasLogger<L>, ...fragments: LogFragment[]): DasLogger<L> {
-    const meta = this[DasMetaSymbol];
-    return logger<L>({...meta, chain: [...fragments, ...meta.chain]})
-}
-function setLevels<L extends LogLevels>(this: InternalDasLogger<L>, levels:L): DasLogger<L> {
-    const meta = this[DasMetaSymbol];
-    return logger<L>({...meta, levels});
-}
-function setMinimumLogLevel<L extends LogLevels>(this: InternalDasLogger<L>, minimumLogLevel: keyof L): DasLogger<L> {
-    const meta = this[DasMetaSymbol];
-    return logger<L>({...meta, minimumLogLevel: meta.levels[minimumLogLevel]});
-}
-function setAppender<L extends LogLevels>(this: InternalDasLogger<L>, appenderFactory: AppenderFactory) : DasLogger<L> {
-    const meta = this[DasMetaSymbol];
-    return logger<L>({...meta, appenderFactory});
-}
-
-function isFunction(x:any) : x is Function {
-    return typeof(x) === 'function';
-}
+type InternalDasLogger<L extends LogLevels, C extends SigilChain> = DasLogger<L, C> &  {[DasMetaSymbol]: DasMeta<L, C>};
 
 /**
  * A hack to force console.log to call a .toString function. This is necessary to simultaneously allow for
@@ -109,27 +93,31 @@ function toStringHackFactory(toStringFunc:() => string) {
     return func;
 }
 
-function isSigil(x:any): x is LogSigil {
-    return x.type && x.type === 'daslog-sigil';
-}
+// const [first, second, third] = id([Sigil.Time(''), Sigil.Level(), Sigil.Category('yo')],
+//     ([time, level, cat]) => ([cat, level, time])
+// );
 
-export function processSigil(meta:AppenderFactoryMeta, sigil:LogSigil) {
-    switch (sigil.value) {
-        case sigils.level.value:
+export function processSigil(meta:AppenderFactoryMeta, sigil:Sigil) {
+    switch (sigil.type) {
+        case 'LEVEL':
             return meta.logLevelName;
+        case 'CATEGORY':
+            return `${sigil.name}`;
+        case 'TIME':
+            return String(Date.now());
+
+        default: return exhaust(sigil);
     }
-    return sigil;
 }
-const defaultConsoleAppender: AppenderFactory = (meta, fragments, separator = '|') => {
+const defaultConsoleAppender: AppenderFactory = (meta, sigils, separator = '|') => {
     let combined = toStringHackFactory(function() {
-        return fragments
-            .map(fragment => (isSigil(fragment)) ? processSigil(meta, fragment) : fragment)
-            .map(fragment => (isFunction(fragment) ? fragment() : fragment))
+        return sigils
+            .map(sigil => processSigil(meta, sigil))
             .join(` ${separator} `);
     });
 
     // %s in conjunction with combined being a function calls toString cleanly in both node and the browser
-    return console.log.bind(console, ...(fragments.length > 0)?['%s', combined, separator]:[]);
+    return console.log.bind(console, ...(sigils.length > 0)?['%s', combined, separator]:[]);
 }
 
 export const log4jLevels = {
@@ -141,8 +129,12 @@ export const log4jLevels = {
     fatal: 5,
 }
 
-const defaultMeta: DasMeta<typeof log4jLevels> = {
-    chain: [],
+export const baseChain = [
+    Sigil.Level(),
+] as const;
+
+const defaultMeta: DasMeta<typeof log4jLevels, typeof baseChain> = {
+    chain: baseChain,
     levels: log4jLevels,
     appenderFactory: defaultConsoleAppender,
 }
@@ -152,7 +144,7 @@ const defaultMeta: DasMeta<typeof log4jLevels> = {
  * depending on the appender specified in the meta object.
  * @param meta - The DasMeta object for the 
  */
-function funcify<L extends LogLevels>(meta: DasMeta<L>) {
+function funcify<L extends LogLevels, C extends SigilChain>(meta: DasMeta<L, C>) {
     return Object.keys(meta.levels).reduce((result, levelName: keyof L & string) => {
         result[levelName] = 
             (meta.minimumLogLevel && meta.minimumLogLevel > meta.levels[levelName])
@@ -166,46 +158,35 @@ function funcify<L extends LogLevels>(meta: DasMeta<L>) {
  * Stitch together the logger.
  * @param _dasMeta 
  */
-export function logger<L extends LogLevels = typeof log4jLevels>(meta:Partial<DasMeta<L>> = {}): DasLogger<L> {
-    const _dasMeta = {...defaultMeta, ...meta};
-    const untypedLevelFuncs:any = funcify(_dasMeta);
-    return {
-        add,
-        prefix,
-        setLevels,
-        setAppender,
-        setMinimumLogLevel,
-        [DasMetaSymbol]: _dasMeta,
+function innerLogger<L extends LogLevels, C extends SigilChain>(meta: DasMeta<L, C>): DasLogger<L, C> {
+    const untypedLevelFuncs = funcify<L, C>(meta);
+    const internalLogger: InternalDasLogger<L, C> = {
+        [DasMetaSymbol]: meta,
+        reformat<R extends SigilChain>(format: (c: C) => R) {
+            return innerLogger({...meta, chain: format(meta.chain)})
+        },
+        setLevels(levels) {
+            return innerLogger({...meta, levels});
+        },
+        setAppender(appenderFactory) {
+            return innerLogger({...meta, appenderFactory})
+        },
+        setMinimumLogLevel(minimumLogLevel) {
+            return innerLogger({...meta, minimumLogLevel: this[DasMetaSymbol].levels[minimumLogLevel]});
+        },
         ...untypedLevelFuncs,
+    };
+
+    return internalLogger;
+}
+export function logger(): DasLogger<typeof log4jLevels, typeof baseChain>;
+export function logger<L extends LogLevels, C extends SigilChain>(meta: DasMeta<L, C>): DasLogger<L, C>;
+export function logger<L extends LogLevels, C extends SigilChain>(meta?: DasMeta<L, C>) {
+    if (meta != undefined) {
+        return innerLogger(meta);
+    } else {
+        return innerLogger(defaultMeta);
     }
 }
 
-let defaultLogger = logger();
-
-export default defaultLogger;
-
-/**
- * Destructively remove all properties from an object.
- * @param x - object to be cleared. 
- */
-function clearObject(x:any) {
-    Object.keys(x).forEach(key => {
-        delete x[key];
-    });
-}
-
-/**
- * Destructively update the default logger by clearing the object then incorporating all the properties
- * of the new logger.
- * @param newLogger 
- */
-export function updateDefaultLogger<L extends LogLevels>(newLogger: DasLogger<L>) {
-    /**
-     * Technically I don't need to clear the log object because the type won't allow access to the
-     * older log functions. That said...
-     *  * I want enumerating the properties of the logger to make sense
-     *  * the logger shouldn't surprise users when inspected in the console
-     */
-    clearObject(defaultLogger);
-    Object.assign(defaultLogger, newLogger);
-}
+export default logger;
