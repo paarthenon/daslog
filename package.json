@@ -1,6 +1,6 @@
 {
   "name": "daslog",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "stupid simple logging based on prefixes",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/paarthenon/daslog#readme",
   "devDependencies": {
-    "typescript": "^3.7.0-dev.20191001"
+    "typescript": "^3.6.3"
   },
   "dependencies": {
     "@paarth/variant": "0.0.1",
