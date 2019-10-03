@@ -6,9 +6,34 @@ Other loggers I tried:
  * did not support hierarchical categories
  * supported custom log levels but did not expose that type information (which doesn't help when you work in typescript).
 
-Daslog is a fun little project that solves these problems for me. It's not designed to be an enterprise level logging tool. Given the choice between elegance and performance I'll often choose elegance. 
+Daslog is a fun little project that solves these problems for me. It lets us do neat things like
 
-Daslog was originally short for 'dumb as s*** log'. The earliest version was a single prefix function that proxied the console object with a category-like prefix I wrote out of frustration with getting other logging frameworks to work.
+```typescript
+const log = logger()
+    .setCategory('Utilities')
+    .subCategory('Promises')
+    .append(Sigil.Category())
+
+log.info('Hello World');
+// 2019-10-03 02:42:19 | info | Utilities > Promises | Hello World
+
+// This line is type safe and updates the signature of newLog to
+// DasLog<L, [Sigil.Time, Sigil.Category, Sigil.Level]>
+const newLog = log.reformat(([time, level, category]) => [time, category, level] as const);
+
+const onePunchLevels = {
+    wolf: 0,
+    tiger: 1,
+    demon: 2,
+    dragon: 3,
+    god: 4,
+};
+
+const animeDisaster = newLog.setLevels(onePunchLevels).setCategory('Disaster');
+
+animeDisaster.demon('the city is in danger');
+// 2019-10-03 02:50:03 | Disaster | demon | the city is in danger
+```
 
 This logger
 
@@ -28,42 +53,3 @@ This logger
 
 A short example of the kind of thing you can do:
 ```typescript
-// this is more what we're looking at.
-export const log1 = logger()
-    .reformat(([level]) => [Sigil.Category('hi'), level])
-    .setMinimumLogLevel('warn');
-
-// Unfortunately this is no longer valid. Will be replacing this very shortly.
-
-import defaultLog, * as das from './index'
-
-defaultLog.warn('warn message'); // >warn message
-const categoryLogger = defaultLog
-    .add(das.sigils.level)
-    .add('Category');
-
-categoryLogger.info('category 1') // >Category | category 1
-categoryLogger.warn('category 2')
-
-const sampleLogger = das.logger()
-    .add('New Default')
-    .add(() => (new Date()).toLocaleTimeString())
-
-das.updateDefaultLogger(sampleLogger);
-
-defaultLog.warn('new message?'); // >New Default | 10:25:43 AM | new message?
-
-
-const log1 = das.logger().add("Log1")
-
-const newLevels = {
-    human: 0,
-    saiyan: 1,
-    superSaiyan: 2,
-}
-
-const dbzLog = log1.setLevels(newLevels).add('DbzLog');
-
-dbzLog.human('human hello');
-dbzLog.superSaiyan('super say hello');
-```
