@@ -1,12 +1,12 @@
 /**
  * Simple linked list. 
  */
-export interface Category<C extends string> {
+export interface Category {
     label: string
-    sub?: Category<string>
+    sub?: Category
 }
 
-export function replaceLastCategory<C extends string>(category: Category<string> | undefined, newLabel: C): Category<C> {
+export function replaceLastCategory(category: Category | undefined, newLabel: string): Category {
     if (category == undefined || category.sub == undefined) {
         return {
             label: newLabel,
@@ -19,7 +19,7 @@ export function replaceLastCategory<C extends string>(category: Category<string>
     }
 }
 
-export function addCategory<C extends string>(category: Category<string>, newLabel: C): Category<C> {
+export function addCategory(category: Category, newLabel: string): Category {
     return category.sub == undefined
         ? {...category, sub: {label: newLabel}}
         : {...category, sub: addCategory(category.sub, newLabel)}
