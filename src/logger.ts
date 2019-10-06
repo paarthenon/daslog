@@ -61,11 +61,11 @@ export type DasLogger<L extends LogLevels, C extends ReadonlyArray<Sigil>> = {
      * 
      * export const log4jLevels = {
      *      trace: 0,
-     *      debug: 1,
-     *      info: 2,
-     *      warn: 3,
-     *      error: 4,
-     *      fatal: 5,
+     *      debug: 100,
+     *      info: 200,
+     *      warn: 300,
+     *      error: 400,
+     *      fatal: 500,
      *  }
      */
     setLevels: <T extends LogLevels>(levels:T) => DasLogger<T, C>
@@ -76,7 +76,7 @@ export type DasLogger<L extends LogLevels, C extends ReadonlyArray<Sigil>> = {
      * Implementation note: This literally assigns the empty func `() => {}` to the lower
      * functions. *shrug* the logger's immutable.
      */
-    setMinimumLogLevel: (minimumLogLevel: keyof L) => DasLogger<L, C>
+    setMinimumLogLevel: (minimumLogLevel: keyof L | 'Infinity') => DasLogger<L, C>
     /**
      * The logger has a default console appender. This allows you to modify that if you'd
      * like to provide a file appender, something that 
@@ -100,17 +100,17 @@ type InternalDasLogger<L extends LogLevels, S extends ReadonlyArray<Sigil>>
     = DasLogger<L, S> & {[DasMetaSymbol]: DasMeta<L, S>};
 
 export function getMeta<L extends LogLevels, S extends ReadonlyArray<Sigil>> (logger: DasLogger<L, S>) {
-    const iLogger = logger as InternalDasLogger<L, S>;
+    const iLogger = logger as InternalDasLogger<L, S>; //pls no sue
     return iLogger[DasMetaSymbol];
 }
 
 export const log4jLevels = {
     trace: 0,
-    debug: 1,
-    info: 2,
-    warn: 3,
-    error: 4,
-    fatal: 5,
+    debug: 100,
+    info: 200,
+    warn: 300,
+    error: 400,
+    fatal: 500,
 }
 
 export const baseChain = [
@@ -184,7 +184,8 @@ function innerLogger<
             }) as any;
         },
         setMinimumLogLevel(minimumLogLevel) {
-            return innerLogger({...meta, minimumLogLevel: this[DasMetaSymbol].levels[minimumLogLevel]}) as any;
+            const level = minimumLogLevel === 'Infinity' ? Infinity : this[DasMetaSymbol].levels[minimumLogLevel];
+            return innerLogger({...meta, minimumLogLevel: level}) as any;
         },
         setAppender(appenderFactory) {
             return innerLogger({...meta, appenderFactory}) as any;
