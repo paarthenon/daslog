@@ -1,4 +1,4 @@
-# DasLog [![Build Status](https://travis-ci.com/paarthenon/daslog.svg?branch=master)](https://travis-ci.com/paarthenon/daslog) ![npm](https://img.shields.io/npm/v/daslog)
+# DasLog [![Build Status](https://travis-ci.com/paarthenon/daslog.svg?branch=master)](https://travis-ci.com/paarthenon/daslog) [![npm](https://img.shields.io/npm/v/daslog)](https://www.npmjs.com/package/daslog)
 
 Other loggers I tried:
  * were intended for node.js and used runtime require statements, which did not play well with bundlers
