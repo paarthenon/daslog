@@ -1,7 +1,8 @@
 import {Tuple} from 'ts-toolbelt';
-import {AppenderFactory, defaultConsoleAppender} from './appender';
+import {AppenderFactory} from './appender';
+import {defaultConsoleAppender} from './appender/console';
 import {Category, addCategory, replaceLastCategory} from './category';
-import {Sigil} from './sigil';
+import {Sigils, Sigil} from './sigil';
 
 export type LogFunction = (...args: any[]) => void
 
@@ -49,7 +50,7 @@ export type DasLogger<L extends LogLevels, C extends ReadonlyArray<Sigil>> = {
      */
     reformat<R extends ReadonlyArray<Sigil>>(f: (x: C) => R): DasLogger<L, R>
 
-    setCategory(category: string): DasLogger<L, C>
+    setCategory(category: string, append?: boolean): DasLogger<L, C>
     subCategory(category: string): DasLogger<L, C>
 
     /**
@@ -114,7 +115,7 @@ export const log4jLevels = {
 }
 
 export const baseChain = [
-    Sigil.Time(), Sigil.Level(),
+    Sigils.Time(), Sigils.Level(),
 ] as const;
 
 const defaultMeta: DasMeta<typeof log4jLevels, typeof baseChain> = {
@@ -168,9 +169,10 @@ function innerLogger<
                 chain: format(meta.chain),
             }) as any
         },
-        setCategory<Cat extends string>(category: Cat) {
+        setCategory<Cat extends string>(category: Cat, append = true) {
             const newCategory = meta.category == undefined ? ({label: category}) : replaceLastCategory(meta.category, category)
-            return innerLogger({...meta, category: newCategory}) as any
+            const chain = meta.chain.some(s => s.type === 'Category') ? meta.chain : [...meta.chain, Sigils.Category()];
+            return innerLogger({...meta, category: newCategory, chain}) as any
         },
         subCategory<C extends string>(category: C) {
             const newCategory = meta.category == undefined ? ({label: category}) : addCategory(meta.category, category);

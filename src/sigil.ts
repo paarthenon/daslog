@@ -1,38 +1,19 @@
-import sigil, {Variant, exhaust} from '@paarth/variant';
+import sigil, {exhaust, variantList, VariantsOf, Oneof, payload} from '@paarth/variant';
 import {AppenderFactoryMeta} from './appender';
 import {Category} from './category';
 import dateFormat from 'dateformat';
 
 const defaultFormat = 'yyyy-mm-dd HH:MM:ss';
 
-/**
- * Log sigils.
- */
-export module Sigil {
-    export const Level = sigil('LEVEL');
-    export type Level = ReturnType<typeof Level>;
-
-    export const Category = sigil('CATEGORY');
-    export type Category = ReturnType<typeof Category>;
-
-    /**
-     * Format as per Steven Levithan's dateformat()
-     * 
-     * https://www.npmjs.com/package/dateformat
-     */
-    export const Time = sigil('TIME', (format: string = defaultFormat) => ({format}));
-    export type Time = ReturnType<typeof Time>;
-
-    export const Label = sigil('LABEL', (label: string) => ({label}));
-    export type Label = ReturnType<typeof Label>;
-
-    export const Function = sigil('FUNCTION', (func: (meta: AppenderFactoryMeta) => string) => ({func}));
-    export type Function = ReturnType<typeof Function>;
-}
-/**
- * The various possible Sigils.
- */
-export type Sigil = Variant<typeof Sigil>;
+export const Sigils = variantList([
+    sigil('Level'),
+    sigil('Category'),
+    sigil('Label', payload<string>()),
+    sigil('Time', (format: string = defaultFormat) => ({format})),
+    sigil('Function', (func: (meta: AppenderFactoryMeta) => string) => ({func})),
+]);
+export type Sigils = VariantsOf<typeof Sigils>;
+export type Sigil = Oneof<Sigils>;
 
 /**
  * Renders category as 'Category1 > Subcategory1 > Subcategory2'
@@ -50,15 +31,15 @@ function getCategories(category: Category): string[] {
 
 export function processSigil(meta: AppenderFactoryMeta, sigil: Sigil) {
     switch (sigil.type) {
-        case 'LEVEL':
+        case 'Level':
             return meta.logLevelName;
-        case 'CATEGORY':
+        case 'Category':
             return meta.category != undefined ? categoryString(meta.category) : undefined;
-        case 'TIME':
+        case 'Time':
             return dateFormat(new Date(), sigil.format);
-        case 'LABEL':
-            return sigil.label;
-        case 'FUNCTION':
+        case 'Label':
+            return sigil.payload;
+        case 'Function':
             return sigil.func(meta);
 
         default: return exhaust(sigil);
