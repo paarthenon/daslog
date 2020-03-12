@@ -1,5 +1,22 @@
 # DasLog [![Build Status](https://travis-ci.com/paarthenon/daslog.svg?branch=master)](https://travis-ci.com/paarthenon/daslog) [![npm](https://img.shields.io/npm/v/daslog)](https://www.npmjs.com/package/daslog)
 
+A cute, immutable, and unusually type safe logger for [TypeScript](https://www.typescriptlang.org/) & [ES6+](http://es6-features.org/), [NodeJS](https://nodejs.org/en/) & [Web](https://webpack.js.org/) with some unique features.
+# Quick start
+
+    npm i -S daslog
+
+## Use
+
+```typescript
+// src/log.ts
+import {logger} from 'daslog';
+const log = logger().setCategory('Example');
+
+// src/some/file.ts
+import log from 'log'; // assuming baseUrl: "src"
+log.info('Initializing app'); // 2019-10-03 02:42:19 | info | Example | Initializing app
+```
+
 Other loggers I tried:
  * were intended for node.js and used runtime require statements, which did not play well with bundlers
  * did not maintain line numbers when running in a browser console
@@ -12,7 +29,6 @@ Daslog is a fun little project that solves these problems for me. It lets us do 
 const log = logger()
     .setCategory('Utilities')
     .subCategory('Promises')
-    .append(Sigil.Category())
 
 log.info('Hello World');
 // 2019-10-03 02:42:19 | info | Utilities > Promises | Hello World
@@ -56,9 +72,9 @@ This logger
 
 Note the use of `as const` may be necessary to maintain a well-typed sigil chain. If it's missing the tuple will instead become `Sigil[]`, preventing well-typed reformats in the future.
 
-#### `setCategory(category: string)`: Set the top level category
+#### `setCategory(category: string, append?: boolean)`: Set the top level category
 
-Resets the category of the logger to the parameter
+Resets the category of the logger to the parameter. `append` is `true` by default.
 
 #### `subCategory(category: string)`: Add a new subcategory
 

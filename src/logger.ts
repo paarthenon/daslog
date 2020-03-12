@@ -2,7 +2,7 @@ import {Tuple} from 'ts-toolbelt';
 import {AppenderFactory} from './appender';
 import {defaultConsoleAppender} from './appender/console';
 import {Category, addCategory, replaceLastCategory} from './category';
-import {Sigils, Sigil} from './sigil';
+import {Sigil} from './sigil';
 
 export type LogFunction = (...args: any[]) => void
 
@@ -115,7 +115,7 @@ export const log4jLevels = {
 }
 
 export const baseChain = [
-    Sigils.Time(), Sigils.Level(),
+    Sigil.Time(), Sigil.Level(),
 ] as const;
 
 const defaultMeta: DasMeta<typeof log4jLevels, typeof baseChain> = {
@@ -171,7 +171,7 @@ function innerLogger<
         },
         setCategory<Cat extends string>(category: Cat, append = true) {
             const newCategory = meta.category == undefined ? ({label: category}) : replaceLastCategory(meta.category, category)
-            const chain = meta.chain.some(s => s.type === 'Category') ? meta.chain : [...meta.chain, Sigils.Category()];
+            const chain = meta.chain.some(s => s.type === 'Category') ? meta.chain : [...meta.chain, Sigil.Category()];
             return innerLogger({...meta, category: newCategory, chain}) as any
         },
         subCategory<C extends string>(category: C) {

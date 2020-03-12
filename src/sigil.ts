@@ -1,19 +1,18 @@
-import sigil, {exhaust, variantList, VariantsOf, Oneof, payload} from '@paarth/variant';
+import sigil, {exhaust, variantList, VariantOf, payload, TypeNames, match} from '@paarth/variant';
 import {AppenderFactoryMeta} from './appender';
 import {Category} from './category';
 import dateFormat from 'dateformat';
 
-const defaultFormat = 'yyyy-mm-dd HH:MM:ss';
+export const DEFAULT_FORMAT = 'yyyy-mm-dd HH:MM:ss';
 
-export const Sigils = variantList([
+export const Sigil = variantList([
     sigil('Level'),
     sigil('Category'),
     sigil('Label', payload<string>()),
-    sigil('Time', (format: string = defaultFormat) => ({format})),
+    sigil('Time', (format = DEFAULT_FORMAT) => ({format})),
     sigil('Function', (func: (meta: AppenderFactoryMeta) => string) => ({func})),
 ]);
-export type Sigils = VariantsOf<typeof Sigils>;
-export type Sigil = Oneof<Sigils>;
+export type Sigil<T extends TypeNames<typeof Sigil> = undefined> = VariantOf<typeof Sigil, T>;
 
 /**
  * Renders category as 'Category1 > Subcategory1 > Subcategory2'
@@ -29,19 +28,10 @@ function getCategories(category: Category): string[] {
     return [category.label, ...subcategories];
 }
 
-export function processSigil(meta: AppenderFactoryMeta, sigil: Sigil) {
-    switch (sigil.type) {
-        case 'Level':
-            return meta.logLevelName;
-        case 'Category':
-            return meta.category != undefined ? categoryString(meta.category) : undefined;
-        case 'Time':
-            return dateFormat(new Date(), sigil.format);
-        case 'Label':
-            return sigil.payload;
-        case 'Function':
-            return sigil.func(meta);
-
-        default: return exhaust(sigil);
-    }
-}
+export const processSigil = (meta: AppenderFactoryMeta, sigil: Sigil) => match(sigil, {
+    Category: _ => meta.category != undefined ? categoryString(meta.category) : undefined,
+    Function: ({func}) => func(meta),
+    Label: ({payload}) => payload,
+    Level: _ => meta.logLevelName,
+    Time: ({format}) => dateFormat(new Date(), format),
+});

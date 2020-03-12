@@ -1,6 +1,6 @@
 {
   "name": "daslog",
-  "version": "0.2.6",
+  "version": "0.2.10",
   "description": "A small and unusually type safe logger",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "test": "jest",
     "prepack": "npm run build",
     "example": "node ./lib/index.example"
   },
@@ -27,10 +28,13 @@
   },
   "homepage": "https://github.com/paarthenon/daslog#readme",
   "devDependencies": {
+    "@types/jest": "^25.1.4",
+    "jest": "^25.1.0",
+    "ts-jest": "^25.2.1",
     "typescript": "^3.6.3"
   },
   "dependencies": {
-    "@paarth/variant": "^0.4.4",
+    "@paarth/variant": "^0.9.0",
     "@types/dateformat": "^3.0.1",
     "dateformat": "^3.0.3",
     "streamroller": "^2.2.3",
