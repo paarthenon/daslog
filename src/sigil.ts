@@ -1,4 +1,4 @@
-import sigil, {exhaust, variantList, VariantOf, payload, TypeNames, match} from '@paarth/variant';
+import sigil, {variantList, VariantOf, payload, TypeNames, match} from 'variant';
 import {AppenderFactoryMeta} from './appender';
 import {Category} from './category';
 import dateFormat from 'dateformat';

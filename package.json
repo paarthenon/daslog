@@ -1,6 +1,6 @@
 {
   "name": "daslog",
-  "version": "0.2.10",
+  "version": "0.3.0",
   "description": "A small and unusually type safe logger",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -34,10 +34,10 @@
     "typescript": "^3.6.3"
   },
   "dependencies": {
-    "@paarth/variant": "^0.9.0",
     "@types/dateformat": "^3.0.1",
     "dateformat": "^3.0.3",
     "streamroller": "^2.2.3",
-    "ts-toolbelt": "^4.7.16"
+    "ts-toolbelt": "^4.7.16",
+    "variant": "^1.0.0"
   }
 }
