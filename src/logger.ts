@@ -59,7 +59,7 @@ export type Daslog<
     setLevels<NL extends string>(levels: LogLevelRanks<NL>): Daslog<NL, Chain, LF>;
     setThreshold(threshold: Threshold<LogLevels>): Daslog<LogLevels, Chain, LF>;
 
-    setAppender<NLF extends Func>(appender: () => LF): Daslog<LogLevels, Chain, NLF>;
+    setAppender<NLF extends Func>(appender: Appender<NLF>): Daslog<LogLevels, Chain, NLF>;
 
     setCategory(category: string, options?: SetCategoryOptions): Daslog<LogLevels, Chain, LF>;
     subCategory(category: string): Daslog<LogLevels, Chain, LF>;

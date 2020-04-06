@@ -1,6 +1,6 @@
 {
   "name": "daslog",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A small and unusually type safe logger",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
