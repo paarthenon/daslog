@@ -1,17 +1,17 @@
-import * as rollers from 'streamroller';
-import {AppenderFactory, processSigils, defaultSigilConfig} from '.';
-import {LogFunction} from '../logger';
+import {RollingFileStream} from 'streamroller';
+import {Appender} from '../logger';
+import {VoidFunc} from '../util';
+import {DEFAULT_SIGIL_CONFIG, processSigils} from '../sigil';
 
 /**
- * Saves to a file
- * @param meta 
+ * Saves to a file.
  * @param filename 
  * @param sigilConfig 
  */
-export const defaultFileAppender: AppenderFactory = (meta, filename = 'das.log', sigilConfig = defaultSigilConfig): LogFunction => {
-    const stream = new rollers.RollingFileStream(filename, undefined, undefined, {keepFileExt: true});
-    return ((...args: any[]) => {
+export const fileAppender = (filename = 'das.log', sigilConfig = DEFAULT_SIGIL_CONFIG): Appender<VoidFunc> => {
+    const stream = new RollingFileStream(filename, undefined, undefined, {keepFileExt: true});
+    return (meta, level) => (...args: any[]) => {
         const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-        stream.write(`${processSigils(meta, sigilConfig)} ${msg}\n`);
-    });
+        stream.write(`${processSigils(meta.chain, sigilConfig, {...meta, level, time: Date.now()})} ${msg}\n`);
+    }
 }

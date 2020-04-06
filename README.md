@@ -14,7 +14,7 @@ const log = logger().setCategory('Example');
 
 // src/some/file.ts
 import log from 'log'; // assuming baseUrl: "src"
-log.info('Initializing app'); // 2019-10-03 02:42:19 | info | Example | Initializing app
+log.info('Initializing app'); // [ 2019-10-03 02:42:19 | INFO | Example ] Initializing app
 ```
 
 Other loggers I tried:
@@ -31,24 +31,24 @@ const log = logger()
     .subCategory('Promises')
 
 log.info('Hello World');
-// 2019-10-03 02:42:19 | info | Utilities > Promises | Hello World
+// [ 2019-10-03 02:42:19 | INFO | Utilities > Promises ] Hello World
 
-// This line is type safe and updates the signature of newLog to
-// DasLog<L, [Sigil.Time, Sigil.Category, Sigil.Level]>
+// This line is type safe and updates the signature of newLog's chain to
+// [Sigil.Time, Sigil.Category, Sigil.Level]
 const newLog = log.reformat(([time, level, category]) => [time, category, level] as const);
 
-const onePunchLevels = {
-    wolf: 0,
-    tiger: 1,
-    demon: 2,
-    dragon: 3,
-    god: 4,
-};
+const onePunchLevels = levels([
+    'wolf',
+    'tiger',
+    'demon',
+    'dragon',
+    'god',
+]);
 
 const animeDisaster = newLog.setLevels(onePunchLevels).setCategory('Disaster');
 
 animeDisaster.demon('the city is in danger');
-// 2019-10-03 02:50:03 | Disaster | demon | the city is in danger
+// [ 2019-10-03 02:50:03 | DEMON | Disaster ] the city is in danger
 ```
 
 This logger
@@ -57,7 +57,7 @@ This logger
  * Allows for simple bundling with zero dynamic requires
  * Provides a default console logger that retains line numbers.
     * and the ability to create your own such appenders.
- * Features log levels
+ * Features customizable log levels 
     * and more importantly customizable log levels
         * and yet more importantly typings that update as you create loggers that use these custom levels
  * Features categories and subcategories
@@ -72,9 +72,25 @@ This logger
 
 Note the use of `as const` may be necessary to maintain a well-typed sigil chain. If it's missing the tuple will instead become `Sigil[]`, preventing well-typed reformats in the future.
 
-#### `setCategory(category: string, append?: boolean)`: Set the top level category
+#### `setCategory(category: string, options: SetCategoryOptions)`: Set the top level category
 
-Resets the category of the logger to the parameter. `append` is `true` by default.
+Resets the category of the logger to the parameter. 
+
+The structure of options is:
+```typescript
+interface SetCategoryOptions {
+    /**
+     * If my logger's categories are [A, B] and I call setCategory('D'), 
+     * should my new list be [D] instead of [A, D]? (false by default)
+     */
+    reset?: boolean;
+    /**
+     * If my logger does not have a category in its chain, should this
+     * command add it to the end? (true by default)
+     */
+    append?: boolean;
+}
+```
 
 #### `subCategory(category: string)`: Add a new subcategory
 
@@ -88,11 +104,12 @@ The magic. The levels argument must extend LogLevels i.e. implement `{[level: st
 
 Some people care about keeping a good spread in the values. It's not a bad idea and I've done so for convenience but in a pinch remember you can always remap the values to have wider gaps in the same order.
 
-#### `setMinimumLogLevel(minimumLogLevel: keyof L | 'Infinity')` Assign the minimum log level
+#### `setThreshold(threshold: keyof L | 'Infinity')` Assign the minimum log level
 
 If this is set to `'Infinity'` logging is effectively turned off (unless you happen to have a log level with a weight of `Infinity` which... don't do that). Frankly I included this for parity with other loggers, I don't have a use case where I turn logging off fully.
 
 The logger will also include log functions. By default these will correspond to the default log levels, i.e.
+* `trace` 
 * `debug`
 * `info`
 * `warn`
@@ -117,7 +134,7 @@ Sigils are responsible for the `2019-10-03 02:42:19 | info | Utilities > Promise
 
 Sigil types:
 
- * Level
+ * Level `(format: string) => string` -- function to apply a modifier to the levels. By default, `.toUpperCase()`
  * Category
  * Time `(format: string)` -- dateformat format string
  * Label `(label: string)`
@@ -129,6 +146,6 @@ Sigil types:
 
 Wrapper functions obfuscate the call site of the log message. That alone makes it worth it to me. By having a factory that returns a preconfigured partially bound `console.log()` I retain the information of the call site and trivially support all of the powerful `console` functionality. Note that this doesn't prevent a user from creating custom factories that generate a wrapper, it just provides a mechanism for users to create factories that don't.
 
-### Why assign no-op functions to log levels below the `minimumLogLevel`?
+### Why assign no-op functions to log levels below the `threshold`?
 
 This was a natural consequence of using factories to get line numbers. We can no longer perform the logic to decide whether or not to print the message when the log function is called so we must do so when the logger is created/configured. Besides, it's kinda neat that turning off logging means you call the empty func `() => {}` every so often and that's the only performance impact. 

@@ -1,211 +1,172 @@
+import {variantList, variant, TypeNames, VariantOf} from 'variant';
 import {Tuple} from 'ts-toolbelt';
-import {AppenderFactory} from './appender';
-import {defaultConsoleAppender} from './appender/console';
-import {Category, addCategory, replaceLastCategory} from './category';
+
 import {Sigil} from './sigil';
+import {Func, noop} from './util';
+import {consoleAppender} from './appender/console';
+import {fileAppender} from './appender/file';
+import {replaceLastCategory, Category, addCategory} from './category';
+import {LogLevelRanks, LOG4J_LEVELS, Threshold, parseLevel} from './levels';
 
-export type LogFunction = (...args: any[]) => void
 
-/**
- * Log levels are specified as an object mapping level names to numbers.
- * 
- * ex:
- * 
- * const levels = {
- *     debug: 0,
- *     info: 1,
- *     warn: 2,
- *     error: 3,
- *     fatal: 4,
- * }
- */
-export interface LogLevels {
-    [level: string]: number
+
+export interface DasMeta<Levels extends string, Chain extends ReadonlyArray<Sigil>, LogFunc extends Func> {
+    levels: LogLevelRanks<Levels>;
+    threshold?: number;
+    appender: Appender<LogFunc>;
+    category?: Category;
+    chain: Chain;
 }
 
-/**
- * Log levels tied to function names
- */
-export type LogFuncs<T extends LogLevels> = {
-    [P in keyof T]: LogFunction
-}
-
-/**
- * A logger constructed of several management functions and the levels specific logging functions
- */
-export type DasLogger<L extends LogLevels, C extends ReadonlyArray<Sigil>> = {
-    /**
-     * Append sigil to logger config
-     * @param x 
-     */
-    append<S extends Sigil>(x: S): DasLogger<L, Tuple.Append<C, S>>
-    /**
-     * Prepend sigil to logger fragment list
-     * @param s 
-     */
-    prepend<S extends Sigil>(s: S): DasLogger<L, Tuple.Prepend<C, S>>
-    /**
-     * Remember to use 'as const'
-     * @param f 
-     */
-    reformat<R extends ReadonlyArray<Sigil>>(f: (x: C) => R): DasLogger<L, R>
-
-    setCategory(category: string, append?: boolean): DasLogger<L, C>
-    subCategory(category: string): DasLogger<L, C>
-
-    /**
-     * Set log levels. After setting the minimum log level will be set to the lowest possible.
-     * 
-     * See the format of LogLevels
-     * 
-     * Example default logLevels:
-     * 
-     * export const log4jLevels = {
-     *      trace: 0,
-     *      debug: 100,
-     *      info: 200,
-     *      warn: 300,
-     *      error: 400,
-     *      fatal: 500,
-     *  }
-     */
-    setLevels: <T extends LogLevels>(levels:T) => DasLogger<T, C>
-    /**
-     * Setting the minimum log level will cause all attempts to log at a lower severity
-     * to no-op. 
-     * 
-     * Implementation note: This literally assigns the empty func `() => {}` to the lower
-     * functions. *shrug* the logger's immutable.
-     */
-    setMinimumLogLevel: (minimumLogLevel: keyof L | 'Infinity') => DasLogger<L, C>
-    /**
-     * The logger has a default console appender. This allows you to modify that if you'd
-     * like to provide a file appender, something that 
-     */
-    setAppender: (logGenerator: AppenderFactory) => DasLogger<L, C>
-} & LogFuncs<L> // cute, huh?
-
-/**
- * The internal meta 
- */
-export type DasMeta<L extends LogLevels, S extends ReadonlyArray<Sigil>> = {
-    levels: L
-    minimumLogLevel?: number
-    chain: S
-    category?: Category
-    appenderFactory: AppenderFactory
-}
-const DasMetaSymbol = Symbol('daslog metadata');
-
-type InternalDasLogger<L extends LogLevels, S extends ReadonlyArray<Sigil>> 
-    = DasLogger<L, S> & {[DasMetaSymbol]: DasMeta<L, S>};
-
-export function getMeta<L extends LogLevels, S extends ReadonlyArray<Sigil>> (logger: DasLogger<L, S>) {
-    const iLogger = logger as InternalDasLogger<L, S>; //pls no sue
-    return iLogger[DasMetaSymbol];
-}
-
-export const log4jLevels = {
-    trace: 0,
-    debug: 100,
-    info: 200,
-    warn: 300,
-    error: 400,
-    fatal: 500,
-}
-
-export const baseChain = [
-    Sigil.Time(), Sigil.Level(),
+const DEFAULT_CHAIN = [
+    Sigil.Time(),
+    Sigil.Level(s => s.toUpperCase()),
 ] as const;
 
-const defaultMeta: DasMeta<typeof log4jLevels, typeof baseChain> = {
-    chain: baseChain,
-    levels: log4jLevels,
-    appenderFactory: defaultConsoleAppender,
+const defaultMeta: DasMeta<keyof typeof LOG4J_LEVELS, typeof DEFAULT_CHAIN, Func> = {
+    levels: LOG4J_LEVELS,
+    appender: consoleAppender(),
+    chain: DEFAULT_CHAIN,
 }
 
-/**
- * Transform the levels object from the meta object to the appropriate functions
- * depending on the appender specified in the meta object.
- * @param meta - The DasMeta object for the 
- */
-function funcify<L extends LogLevels, C extends ReadonlyArray<Sigil>>(meta: DasMeta<L, C>) {
-    return Object.keys(meta.levels).reduce((result, levelName: keyof L & string) => {
-        result[levelName] = 
-            (meta.minimumLogLevel == undefined || meta.levels[levelName] >= meta.minimumLogLevel)
-                ? meta.appenderFactory({...meta, logLevelName: levelName})
-                : () => {}
-        return result;
-    }, {} as LogFuncs<L>);
-}
+export type Appender<LF extends Func> = (meta: DasMeta<string, readonly Sigil[], any>, level: string) => LF;
 
-/**
- * Stitch together the logger.
- * @param _dasMeta 
- */
-function innerLogger<
-    L extends LogLevels,
-    C extends ReadonlyArray<Sigil>,
->(meta: DasMeta<L, C>): DasLogger<L, C> {
+interface SetCategoryOptions {
     /**
-     * I kind of hate casting these as any but the backdoor recursive types ts-toolbelt uses don't play
-     * well with compiler limitations. There is apparently a fix using interfaces but there's also the potential
-     * for better recursive types on the horizon (3.7 on). Until ts-toolbelt or typescript update... 
-     * 
-     *  - if you hate this too, I'd love a PR.
+     * If my logger's categories are [A, B] and I call setCategory('D'), 
+     * should my new list be [D] instead of [A, D]? (false by default)
      */
-    const logFuncs = funcify<L, C>(meta);
-    const internalLogger = <InternalDasLogger<L, C>>{
-        [DasMetaSymbol]: meta,
-        append<S extends Sigil>(s: S): DasLogger<L, Tuple.Append<C, S>> {
-            return innerLogger({...meta, chain: [...meta.chain, s]}) as any;
-        },
-        prepend(s: Sigil) {
-            return innerLogger({...meta, chain: [s, ...meta.chain]}) as any;
-        },
-        reformat<R extends ReadonlyArray<Sigil>>(format: (c: C) => R) {
-            return innerLogger({
-                ...meta,
-                chain: format(meta.chain),
-            }) as any
-        },
-        setCategory<Cat extends string>(category: Cat, append = true) {
-            const newCategory = meta.category == undefined ? ({label: category}) : replaceLastCategory(meta.category, category)
-            const chain = meta.chain.some(s => s.type === 'Category') ? meta.chain : [...meta.chain, Sigil.Category()];
-            return innerLogger({...meta, category: newCategory, chain}) as any
-        },
-        subCategory<C extends string>(category: C) {
-            const newCategory = meta.category == undefined ? ({label: category}) : addCategory(meta.category, category);
-            return innerLogger({...meta, category: newCategory}) as any
-        },
-        setLevels(levels) {
-            return innerLogger({
-                ...meta,
-                levels,
-                minimumLogLevel: undefined,
-            }) as any;
-        },
-        setMinimumLogLevel(minimumLogLevel) {
-            const level = minimumLogLevel === 'Infinity' ? Infinity : this[DasMetaSymbol].levels[minimumLogLevel];
-            return innerLogger({...meta, minimumLogLevel: level}) as any;
-        },
-        setAppender(appenderFactory) {
-            return innerLogger({...meta, appenderFactory}) as any;
-        },
-        ...logFuncs,
-    };
-
-    return internalLogger;
+    reset?: boolean;
+    /**
+     * If my logger does not have a category in its chain, should this
+     * command add it to the end? (true by default)
+     */
+    append?: boolean;
+}
+const DEFAULT_CATEGORY_OPTIONS: SetCategoryOptions = {
+    reset: false,
+    append: true,
 }
 
-export function logger(): DasLogger<typeof log4jLevels, typeof baseChain>;
-export function logger<L extends LogLevels, S extends ReadonlyArray<Sigil>>(meta: DasMeta<L, S>): DasLogger<L, S>;
-export function logger<L extends LogLevels, S extends ReadonlyArray<Sigil>>(meta?: DasMeta<L, S>) {
-    if (meta != undefined) {
-        return innerLogger(meta);
+/**
+ * Logger scoped to certaint types.
+ */
+export type Daslog<
+    LogLevels extends string, // 'trace' | 'debug' | 'warn' | ...
+    Chain extends ReadonlyArray<Sigil>,
+    LF extends Func,
+> = {[L in LogLevels]: LF} & {
+    setLevels<NL extends string>(levels: LogLevelRanks<NL>): Daslog<NL, Chain, LF>;
+    setThreshold(threshold: Threshold<LogLevels>): Daslog<LogLevels, Chain, LF>;
+
+    setAppender<NLF extends Func>(appender: () => LF): Daslog<LogLevels, Chain, NLF>;
+
+    setCategory(category: string, options?: SetCategoryOptions): Daslog<LogLevels, Chain, LF>;
+    subCategory(category: string): Daslog<LogLevels, Chain, LF>;
+
+    append<S extends Sigil>(s: Sigil): Daslog<LogLevels, Tuple.Append<Chain, S>, LF>;
+    prepend<S extends Sigil>(s: Sigil): Daslog<LogLevels, Tuple.Prepend<Chain, S>, LF>;
+    reformat<CN extends readonly Sigil[]>(func: (oldFormat: Chain) => CN): Daslog<LogLevels, CN, LF>;
+}
+
+const META = Symbol('daslog');
+type InternalDaslog<
+    LogLevels extends string,
+    Chain extends ReadonlyArray<Sigil>,
+    LF extends Func,
+> = Daslog<LogLevels, Chain, LF> & {
+    [META]: DasMeta<LogLevels, Chain, LF>;
+}
+
+export function logger(): Daslog<keyof typeof LOG4J_LEVELS, typeof DEFAULT_CHAIN, ReturnType<typeof defaultMeta.appender>>;
+export function logger<Levels extends string, Chain extends ReadonlyArray<Sigil>, LF extends Func>(meta: DasMeta<Levels, Chain, LF>): Daslog<Levels, Chain, LF>;
+export function logger<Levels extends string, Chain extends ReadonlyArray<Sigil>, LF extends Func>(meta?: DasMeta<Levels, Chain, LF>): any {
+    if (meta) {
+        return createLogger({
+            ...defaultMeta,
+            levels: meta.levels,
+        });
     } else {
-        return innerLogger(defaultMeta);
+        return createLogger(defaultMeta);
     }
 }
 
-export default logger;
+/**
+ * Utility function to generate the log functions.
+ * @param meta 
+ * @param invalidFunc 
+ */
+function logFuncs<Levels extends string, Chain extends readonly Sigil[], LF extends Func>(meta: DasMeta<Levels, Chain, LF>, invalidFunc = noop as LF) {
+    const levels = Object.keys(meta.levels) as (keyof typeof meta.levels)[];
+    return levels.reduce((acc, cur) => {
+        acc[cur] = (meta.threshold === undefined || meta.levels[cur] >= meta.threshold) ? meta.appender(meta, cur) : invalidFunc; // the money
+        return acc;
+    }, {} as {[L in Levels]: ReturnType<typeof meta.appender>})
+}
+
+function createLogger<Levels extends string, Chain extends ReadonlyArray<Sigil>, LF extends Func>(meta: DasMeta<Levels, Chain, LF>) {
+    return {
+        [META]: meta,
+        ...logFuncs(meta),
+        setLevels<NL extends string>(this: InternalDaslog<Levels, Chain, LF>, levels: LogLevelRanks<NL>, threshold?: Threshold<NL>) {
+            return createLogger({
+                ...this[META],
+                levels,
+                threshold: undefined,
+            });
+        },
+        setThreshold(threshold: Threshold<Levels>) {
+            return createLogger({
+                ...this[META],
+                threshold: parseLevel(this[META].levels, threshold),
+            });
+        },
+        setAppender<LF extends Func>(appender: () => LF) {
+            return createLogger({
+                ...this[META],
+                appender,
+            });
+        },
+        setCategory(category: string, options?: SetCategoryOptions) {
+            const {append, reset} = {
+                ...options,
+                ...DEFAULT_CATEGORY_OPTIONS,
+            }
+
+            return createLogger({
+                ...this[META],
+                category: reset 
+                    ? {label: category} 
+                    : replaceLastCategory(this[META].category, category),
+                chain: (append && !this[META].chain.some(s => s.type === 'Category')) 
+                    ? [...this[META].chain, Sigil.Category()] 
+                    : this[META].chain,
+            });
+        },
+        subCategory(category: string) {
+            const cat = this[META].category;
+            return createLogger({
+                ...this[META],
+                category: cat ? addCategory(cat, category) : {label: category},
+            });
+        },
+        append(sigil: Sigil) {
+            return createLogger({
+                ...this[META],
+                chain: [...this[META].chain, sigil],
+            });
+        },
+        prepend(sigil: Sigil) {
+            return createLogger({
+                ...this[META],
+                chain: [sigil, ...this[META].chain],
+            });
+        },
+        reformat(format: (old: readonly Sigil[]) => readonly Sigil[]) {
+            return createLogger({
+                ...this[META],
+                chain: format(this[META].chain),
+            })
+        }
+    }
+}

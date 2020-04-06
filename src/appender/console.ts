@@ -1,4 +1,5 @@
-import {AppenderFactory, processSigils, defaultSigilConfig} from '.';
+import {Appender} from '../logger';
+import {SigilConfig, DEFAULT_SIGIL_CONFIG, processSigils} from '../sigil';
 
 /**
  * A hack to force console.log to call a .toString function. This is necessary to simultaneously allow for
@@ -12,18 +13,10 @@ function toStringHackFactory(toStringFunc:() => string) {
     return func;
 }
 
-/**
- * The default appender. Prints to the console. When in a browser console this will maintain the line
- * numbers of the calling site through a couple neat tricks. See source.
- * @param meta The logger's internal meta information.
- * @param separator defaults to '|' (with spaces).
- */
-export const defaultConsoleAppender: AppenderFactory = (meta, sigilConfig = defaultSigilConfig) => {
-    let combined = toStringHackFactory(function() {
-        return processSigils(meta);
-    });
-
-    // %s in conjunction with combined being a function calls toString cleanly in both node and the browser
-    return console.log.bind(console, ...(meta.chain.length > 0)?['%s', combined]:[]);
+export function consoleAppender(config: SigilConfig = DEFAULT_SIGIL_CONFIG): Appender<typeof console['log']> {
+    return (meta, l) => {
+        const combined = toStringHackFactory(() => processSigils(meta.chain, config, {...meta, level: l, time: Date.now()}));
+        return console.log.bind(console, ...(meta.chain.length > 0)?['%s', combined]:[]);
+    }
 }
 

@@ -63,5 +63,8 @@
   "include": [
     "untyped.d.ts",
     "src/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.spec.ts"
   ]
 }
