@@ -6,7 +6,7 @@ import {Func, noop} from './util';
 import {consoleAppender} from './appender/console';
 import {fileAppender} from './appender/file';
 import {replaceLastCategory, Category, addCategory} from './category';
-import {LogLevelRanks, LOG4J_LEVELS, Threshold, parseLevel} from './levels';
+import {LogLevelRanks, LOG4J_LEVELS, Threshold, parseLevel, levels} from './levels';
 
 
 
@@ -170,3 +170,15 @@ function createLogger<Levels extends string, Chain extends ReadonlyArray<Sigil>,
         }
     }
 }
+
+export const stdlog = logger();
+export const syslog = logger().setLevels(levels([
+    'debug',
+    'info',
+    'notice',
+    'warning',
+    'err',
+    'crit',
+    'alert',
+    'emerg',
+]));

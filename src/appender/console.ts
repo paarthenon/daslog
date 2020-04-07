@@ -13,10 +13,20 @@ function toStringHackFactory(toStringFunc:() => string) {
     return func;
 }
 
+/**
+ * Factory function to return a bound console.log with the sigil chain pre-applied
+ * @param config options to control the rendering of the sigil chain
+ */
 export function consoleAppender(config: SigilConfig = DEFAULT_SIGIL_CONFIG): Appender<typeof console['log']> {
     return (meta, l) => {
-        const combined = toStringHackFactory(() => processSigils(meta.chain, config, {...meta, level: l, time: Date.now()}));
-        return console.log.bind(console, ...(meta.chain.length > 0)?['%s', combined]:[]);
+        // it looks like a void function, but its whole purpose is to have
+        // toString() called on it.
+        const stringInABox = toStringHackFactory(() => processSigils(
+            meta.chain,
+            config,
+            {...meta, level: l, time: Date.now()}
+        ));
+        return console.log.bind(console, ...(meta.chain.length > 0)?['%s', stringInABox]:[]);
     }
 }
 
