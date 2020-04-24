@@ -1,12 +1,4 @@
-import {parseLevel, LOG4J_LEVELS, levels} from './levels'
-
-test('parseLevel', () => {
-    expect(parseLevel(LOG4J_LEVELS, 'error')).toBe(LOG4J_LEVELS.error);
-})
-
-test('parseLevel (infinte)', () => {
-    expect(parseLevel(LOG4J_LEVELS, 'Infinity')).toBeGreaterThan(Number.MAX_SAFE_INTEGER);
-})
+import {LOG4J_LEVELS, levels} from './levels'
 
 test('levels', () => {
     const levelList = ['a', 'b', 'c', 'd'] as const;

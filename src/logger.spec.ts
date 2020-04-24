@@ -2,6 +2,7 @@ import {logger} from './logger'
 import {ROOM_FOR_JESUS} from './constants';
 import {levels} from './levels';
 import {Sigil} from './sigil';
+import {collectionAppender, getCollected} from './appender/collector'
 
 test('prog', () => {
     const thing = levels(['a', 'b']);
@@ -52,4 +53,20 @@ test('minimum level', () => {
             resolve();
         }, 3000);
     })
+})
+
+test('collected', () => {
+    const log = logger().setAppender(collectionAppender());
+
+    log.info('hello collector');
+
+    expect(getCollected().length).toBe(1);
+})
+
+test('mute', () => {
+    const log = logger().setAppender(collectionAppender()).mute();
+
+    log.info('hello');
+
+    expect(getCollected().length).toBe(0);
 })

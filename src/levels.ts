@@ -5,23 +5,6 @@ export type LogLevelRanks<Levels extends string> = {
 }
 
 /**
- * 
- * 
- * log func is T => void;
- * 
- *   the appender is (config) => T => void;
- * 
- *      for console that's consoleConfig => console.log(bound);
- *      for file that's fileConfig => (...args: any[]) => void;
- * 
- */
-export type Threshold<L extends string> = L | 'Infinity'; 
-
-export function parseLevel<L extends string>(rank: LogLevelRanks<L>, level: Threshold<L>) : number {
-    return level === 'Infinity' ? Infinity : rank[level];
-}
-
-/**
  * Generate a level priority map
  * @param order 
  * @param spacing 
@@ -41,4 +24,15 @@ export const LOG4J_LEVELS = levels([
     'warn',
     'error',
     'fatal',
+]);
+
+export const SYSLOG_LEVELS = levels([
+    'debug',
+    'info',
+    'notice',
+    'warning',
+    'err',
+    'crit',
+    'alert',
+    'emerg',
 ]);

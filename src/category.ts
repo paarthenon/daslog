@@ -42,3 +42,9 @@ export function addCategory(category: Category, newLabel: string): Category {
  * @returns string[] - the labels as an array
  */
 export const walkCat = (category?: Category): string[] => category ? [category.label].concat(walkCat(category.sub)) : [];
+
+/**
+ * Get the category label at the tail of the linked list.
+ * @param category 
+ */
+export const getClosestCategory = (category?: Category): string | undefined => category?.sub ? getClosestCategory(category.sub) : category?.label;

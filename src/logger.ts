@@ -1,12 +1,10 @@
-import {variantList, variant, TypeNames, VariantOf} from 'variant';
 import {Tuple} from 'ts-toolbelt';
 
 import {Sigil} from './sigil';
 import {Func, noop} from './util';
 import {consoleAppender} from './appender/console';
-import {fileAppender} from './appender/file';
-import {replaceLastCategory, Category, addCategory} from './category';
-import {LogLevelRanks, LOG4J_LEVELS, Threshold, parseLevel, levels} from './levels';
+import {replaceLastCategory, Category, addCategory, getClosestCategory, walkCat} from './category';
+import {LogLevelRanks, LOG4J_LEVELS, levels, SYSLOG_LEVELS} from './levels';
 
 
 
@@ -56,8 +54,15 @@ export type Daslog<
     Chain extends ReadonlyArray<Sigil>,
     LF extends Func,
 > = {[L in LogLevels]: LF} & {
-    setLevels<NL extends string>(levels: LogLevelRanks<NL>): Daslog<NL, Chain, LF>;
-    setThreshold(threshold: Threshold<LogLevels>): Daslog<LogLevels, Chain, LF>;
+    readonly levels: LogLevelRanks<LogLevels>;
+    readonly threshold?: number;
+    readonly category?: string;
+    readonly categories?: Category;
+
+    setLevels<NL extends string>(levels: LogLevelRanks<NL>, threshold?: NL): Daslog<NL, Chain, LF>;
+    setThreshold(threshold: LogLevels): Daslog<LogLevels, Chain, LF>;
+    clearThreshold(): Daslog<LogLevels, Chain, LF>;
+    mute(): Daslog<LogLevels, Chain, LF>;
 
     setAppender<NLF extends Func>(appender: Appender<NLF>): Daslog<LogLevels, Chain, NLF>;
 
@@ -70,13 +75,6 @@ export type Daslog<
 }
 
 const META = Symbol('daslog');
-type InternalDaslog<
-    LogLevels extends string,
-    Chain extends ReadonlyArray<Sigil>,
-    LF extends Func,
-> = Daslog<LogLevels, Chain, LF> & {
-    [META]: DasMeta<LogLevels, Chain, LF>;
-}
 
 export function logger(): Daslog<keyof typeof LOG4J_LEVELS, typeof DEFAULT_CHAIN, ReturnType<typeof defaultMeta.appender>>;
 export function logger<Levels extends string, Chain extends ReadonlyArray<Sigil>, LF extends Func>(meta: DasMeta<Levels, Chain, LF>): Daslog<Levels, Chain, LF>;
@@ -107,19 +105,37 @@ function logFuncs<Levels extends string, Chain extends readonly Sigil[], LF exte
 function createLogger<Levels extends string, Chain extends ReadonlyArray<Sigil>, LF extends Func>(meta: DasMeta<Levels, Chain, LF>) {
     return {
         [META]: meta,
+        levels: meta.levels,
+        threshold: meta.threshold,
+        category: getClosestCategory(meta.category),
+        categories: walkCat(meta.category),
+
         ...logFuncs(meta),
-        setLevels<NL extends string>(this: InternalDaslog<Levels, Chain, LF>, levels: LogLevelRanks<NL>, threshold?: Threshold<NL>) {
+        
+        setLevels<NL extends string>(levels: LogLevelRanks<NL>, threshold?: NL) {
             return createLogger({
                 ...this[META],
                 levels,
-                threshold: undefined,
+                threshold: threshold != undefined ? levels[threshold] : undefined,
             });
         },
-        setThreshold(threshold: Threshold<Levels>) {
+        setThreshold(level: Levels) {
             return createLogger({
                 ...this[META],
-                threshold: parseLevel(this[META].levels, threshold),
+                threshold: this[META].levels[level],
             });
+        },
+        clearThreshold(){
+            return createLogger({
+                ...this[META],
+                threshold: undefined,
+            })
+        },
+        mute() {
+            return createLogger({
+                ...this[META],
+                threshold: Infinity,
+            })
         },
         setAppender<LF extends Func>(appender: () => LF) {
             return createLogger({
@@ -167,18 +183,9 @@ function createLogger<Levels extends string, Chain extends ReadonlyArray<Sigil>,
                 ...this[META],
                 chain: format(this[META].chain),
             })
-        }
+        },
     }
 }
 
 export const stdlog = logger();
-export const syslog = logger().setLevels(levels([
-    'debug',
-    'info',
-    'notice',
-    'warning',
-    'err',
-    'crit',
-    'alert',
-    'emerg',
-]));
+export const syslog = logger().setLevels(SYSLOG_LEVELS);
