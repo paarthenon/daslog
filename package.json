@@ -1,7 +1,7 @@
 {
   "name": "daslog",
-  "version": "0.4.2",
-  "description": "A small and unusually type safe logger",
+  "version": "0.4.3",
+  "description": "A cute, immutable, and unusually type safe logger.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -19,7 +19,16 @@
   },
   "keywords": [
     "log",
-    "console"
+    "logs",
+    "console",
+    "logging",
+    "logger",
+    "loglevel",
+    "json",
+    "debug",
+    "file logger",
+    "console logger",
+    "custom"
   ],
   "author": "Paarth",
   "license": "MPL-2.0",
@@ -29,15 +38,15 @@
   "homepage": "https://github.com/paarthenon/daslog#readme",
   "devDependencies": {
     "@types/jest": "^25.2.1",
-    "jest": "^25.2.7",
-    "ts-jest": "^25.3.1",
+    "jest": "^25.5.4",
+    "ts-jest": "^25.4.0",
     "typescript": "^3.8.3"
   },
   "dependencies": {
     "@types/dateformat": "^3.0.1",
     "dateformat": "^3.0.3",
-    "streamroller": "^2.2.3",
-    "ts-toolbelt": "^6.3.3",
-    "variant": "^1.0.0"
+    "streamroller": "^2.2.4",
+    "ts-toolbelt": "^6.6.2",
+    "variant": "^1.1.0"
   }
 }
