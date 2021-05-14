@@ -57,6 +57,8 @@ This logger
  * Allows for simple bundling with zero dynamic requires
  * Provides a default console logger that retains line numbers.
     * and the ability to create your own such appenders.
+ * Can be used as an event-logger or message queue.
+ * Supports object-logging
  * Features customizable log levels 
     * and more importantly customizable log levels
         * and yet more importantly typings that update as you create loggers that use these custom levels
@@ -149,3 +151,8 @@ Wrapper functions obfuscate the call site of the log message. That alone makes i
 ### Why assign no-op functions to log levels below the `threshold`?
 
 This was a natural consequence of using factories to get line numbers. We can no longer perform the logic to decide whether or not to print the message when the log function is called so we must do so when the logger is created/configured. Besides, it's kinda neat that turning off logging means you call the empty func `() => {}` every so often and that's the only performance impact. 
+
+
+### Developer notes
+
+The `daslog` type and object is a neat little gadget that carries its essential functions as well as some log functions dynamically merged in at runtime.
