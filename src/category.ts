@@ -1,7 +1,12 @@
 /**
- * Simple category name linked list. 
+ * Simple category name linked list.
+ * 
+ * @todo implement TS 4.1's template literal features.
  */
 export interface Category {
+    /**
+     * The specific term involved.
+     */
     label: string
     sub?: Category
 }
@@ -26,8 +31,8 @@ export function replaceLastCategory(category: Category | undefined, newLabel: st
 
 /**
  * Add a new category to the end of the chain
- * @param category 
- * @param newLabel 
+ * @param category current `Category` of the logger.
+ * @param newLabel the text label of the new category.
  */
 export function addCategory(category: Category, newLabel: string): Category {
     return category.sub == undefined
@@ -38,13 +43,24 @@ export function addCategory(category: Category, newLabel: string): Category {
 
 /**
  * Walk your cat aka iterate your categories, returning a string[].
+ * 
+ * @remarks internal.
+ * 
  * @param category optional 
  * @returns string[] - the labels as an array
  */
-export const walkCat = (category?: Category): string[] => category ? [category.label].concat(walkCat(category.sub)) : [];
+export const walkCat = (category?: Category): string[] =>
+    category
+        ? [category.label].concat(walkCat(category.sub))
+        : []
+;
 
 /**
  * Get the category label at the tail of the linked list.
  * @param category 
  */
-export const getClosestCategory = (category?: Category): string | undefined => category?.sub ? getClosestCategory(category.sub) : category?.label;
+export const getClosestCategory = (category?: Category): string | undefined =>
+    category?.sub 
+        ? getClosestCategory(category.sub)
+        : category?.label
+;

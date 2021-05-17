@@ -135,7 +135,9 @@ export const processSigil = (sigil: Sigil, context: SigilContext) => match(sigil
 });
 
 /**
- * Configure the formatting of the sigil chain. 
+ * Configure the formatting of the sigil chain.
+ * 
+ * @todo add an option to wrap each term.
  */
 export interface SigilConfig {
     /**

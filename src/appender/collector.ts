@@ -1,18 +1,26 @@
 import {Appender, DasMeta} from '../logger';
-import {VoidFunc} from '../util';
+import {Func, VoidFunc} from '../util';
 import {processSigils, DEFAULT_SIGIL_CONFIG, Sigil} from '../sigil';
 import {Category} from '../category';
 
-
+type CollectionAppender<T extends Func> = Appender<T> & {getCollected(): string[]};
 
 /**
- * Mostly useful for testing. Records the contents of the message to a log.
+ * Records the contents of the message to an log.
+ * 
+ * That log may be queried through the `.getCollected()` function.
+ * 
+ * @remarks mostly used for internal testing.
  */
 export function collectionAppender() {
-    // this is why global state sucks.
+    type LogFunc = (message: string) => string[];
     let collected: string[] = [];
-    const appender: Appender<(message: string) => string[]> = (meta, l) => (...args: any[]) => {
-        const text = processSigils(meta.chain, DEFAULT_SIGIL_CONFIG, {...meta, time: Date.now(), level: l});
+    const appender: Appender<LogFunc> = (meta, l) => (...args: any[]) => {
+        const text = processSigils(
+            meta.chain,
+            DEFAULT_SIGIL_CONFIG,
+            {...meta, time: Date.now(), level: l},
+        );
         const line = [text, ...args].join(' ');
         collected.push(line);
         return collected;
@@ -22,7 +30,7 @@ export function collectionAppender() {
         getCollected: () => collected,
     })
 
-    return appender;
+    return appender as CollectionAppender<LogFunc>;
 }
 
 export interface LogObject<L extends string = string> {

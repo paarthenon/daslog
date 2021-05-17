@@ -19,8 +19,9 @@ function toStringHackFactory(toStringFunc:() => string) {
  */
 export function consoleAppender(config: SigilConfig = DEFAULT_SIGIL_CONFIG): Appender<typeof console['log']> {
     return (meta, l) => {
-        // it looks like a void function, but its whole purpose is to have
-        // toString() called on it.
+        // it looks like a function `() => void` and it is.
+        // Its whole purpose is to have .toString() called on it
+        // by `console.log` at runtime to get the closest timestamps. 
         const stringInABox = toStringHackFactory(() => processSigils(
             meta.chain,
             config,
