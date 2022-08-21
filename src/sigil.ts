@@ -1,7 +1,8 @@
-import {variantList, TypeNames, VariantOf, variant, Matrix, match, fields, payload, variantModule, onLiteral} from 'variant';
+import {TypeNames, VariantOf, variant, match, payload, onLiteral} from 'variant';
 import dateFormat from 'dateformat';
 import {DEFAULT_FORMAT} from './constants';
 import {Category, walkCat} from './category';
+import type {LogLevelRanks} from './levels';
 
 /**
  * Describe how log level should be rendered.
@@ -86,7 +87,7 @@ export interface SigilContext {
     /**
      * The current set of log levels.
      */
-    levels: {[level: string]: number};
+    levels: LogLevelRanks<string>;
     /**
      * The minimum log level, if any. Anything below this value should not be rendered.
      */

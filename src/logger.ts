@@ -10,10 +10,10 @@ export interface DasMeta<
     LogFunc extends Func
 > {
     levels: LogLevelRanks<Levels>;
-    threshold?: number;
-    appender: Appender<LogFunc>;
-    category?: Category;
     chain: Chain;
+    appender: Appender<LogFunc>;
+    threshold?: number;
+    category?: Category;
 }
 
 const DEFAULT_CHAIN = [
@@ -157,9 +157,15 @@ function createLogger<
     return {
         [META]: meta,
         levels: meta.levels,
-        threshold: meta.threshold,
-        category: getClosestCategory(meta.category),
-        categories: walkCat(meta.category),
+        get threshold() {
+            return meta.threshold;
+        },
+        get category() {
+            return getClosestCategory(meta.category);
+        },
+        get categories() {
+            return walkCat(meta.category);
+        },
 
         ...logFuncs(meta),
         

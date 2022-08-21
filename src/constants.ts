@@ -1,5 +1,5 @@
 /**
- * Yes I now this is obtuse. No I don't want people to actually use it.
+ * Yes I know this is obtuse. No I don't want people to actually use it.
  */
 export const ROOM_FOR_JESUS = 100;
 /**
