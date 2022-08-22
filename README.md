@@ -1,6 +1,18 @@
 # DasLog [![Build Status](https://travis-ci.com/paarthenon/daslog.svg?branch=master)](https://travis-ci.com/paarthenon/daslog) [![npm](https://img.shields.io/npm/v/daslog)](https://www.npmjs.com/package/daslog)
 
 A cute, immutable, and unusually type safe logger for [TypeScript](https://www.typescriptlang.org/) & [ES6+](http://es6-features.org/), [NodeJS](https://nodejs.org/en/) & [Web](https://webpack.js.org/) with some unique features.
+
+- 📦 **Tiny bundle size** — just `4kB` gzipped.
+- 📶 **Custom log levels** — use **log4j**, **syslog**, or your own custom set of levels.
+- 🏷️ **Categories all the way down** — assign categories and subcategories to loggers in a potentially infinite hierarchy.
+- 🧠 **Hyper types** — custom log levels and tokens are reflected on the type itself, creating a fantastic TypeScript DX.
+    - **Type-level formatting** — log tokens are stored in-order at the type level, enabling safe restructuring.
+- 🎯 **Real line numbers** — jump directly to problematic code without any call stack hacking.
+- 🗄️ **Structural Logging** — output tail-able rolling text files or metadata-rich JSON objects, side by side.
+- 📝 **Arbitrary appenders** — write to the console, a rolling file, or an object log. All at the same time.
+
+And more. Daslog is designed to be customized. It's so flexible I even use it as an error collector. I define my log levels as tiers of errors and use an appender that writes to a validation object.
+
 # Quick start
 
     npm i -S daslog
@@ -12,8 +24,8 @@ A cute, immutable, and unusually type safe logger for [TypeScript](https://www.t
 import {logger} from 'daslog';
 const log = logger().setCategory('Example');
 
-// src/some/file.ts
-import log from 'log'; // assuming baseUrl: "src"
+// src/file.ts
+import log from './log'; // assuming baseUrl: "src"
 log.info('Initializing app'); // [ 2019-10-03 02:42:19 | INFO | Example ] Initializing app
 ```
 
@@ -50,21 +62,6 @@ const animeDisaster = newLog.setLevels(onePunchLevels).setCategory('Disaster');
 animeDisaster.demon('the city is in danger');
 // [ 2019-10-03 02:50:03 | DEMON | Disaster ] the city is in danger
 ```
-
-This logger
-
- * Supports node.js and browser runtime environments
- * Allows for simple bundling with zero dynamic requires
- * Provides a default console logger that retains line numbers.
-    * and the ability to create your own such appenders.
- * Can be used as an event-logger or message queue.
- * Supports object-logging
- * Features customizable log levels 
-    * and more importantly customizable log levels
-        * and yet more importantly typings that update as you create loggers that use these custom levels
- * Features categories and subcategories
- * Is designed to be immutable and creates new logger instances leaving the old loggers in place.
-
 ****
 ## Logger
 
