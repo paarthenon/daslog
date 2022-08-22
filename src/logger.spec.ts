@@ -50,3 +50,12 @@ test('minimum level', () => {
         }, 3000);
     })
 })
+
+
+test('indentation', () => {
+    const log = logger();
+
+    log.info('Hello')
+    log.indent().info('World')
+
+})

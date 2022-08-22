@@ -1,8 +1,21 @@
 import {Sigil} from './sigil';
-import {Func, noop} from './util';
+import {Func, LinkedList, noop, popLL, pushLL} from './util';
 import {consoleAppender} from './appender/console';
 import {replaceLastCategory, Category, addCategory, getClosestCategory, walkCat} from './category';
 import {LogLevelRanks, LOG4J_LEVELS, levels, SYSLOG_LEVELS} from './levels';
+
+type Indent = LinkedList<'text', string>;
+
+interface IndentOptions {
+    level?: number;
+    spacing?: string;
+}
+
+export const indentToString = (indent?: Indent): string => 
+    indent != undefined
+        ? `${indent.text ?? ''}${indentToString(indent?.sub)}`
+        : ''
+;
 
 export interface DasMeta<
     Levels extends string,
@@ -14,7 +27,16 @@ export interface DasMeta<
     appender: Appender<LogFunc>;
     threshold?: number;
     category?: Category;
+    /**
+     * Indentation level.
+     */
+    indent?: Indent;
 }
+
+/**
+ * Inner marker. Internal use only.
+ */
+ const META = Symbol('daslog');
 
 const DEFAULT_CHAIN = [
     Sigil.Time(),
@@ -57,7 +79,7 @@ export type Daslog<
     readonly levels: LogLevelRanks<LogLevels>;
     readonly threshold?: number;
     readonly category?: string;
-    readonly categories?: Category;
+    readonly categories?: string[];
 
     /**
      * Assign new levels to the logger. The logger will gain a new function for each level.
@@ -87,12 +109,12 @@ export type Daslog<
     append<S extends Sigil>(s: Sigil): Daslog<LogLevels, [...Chain, S], LogFunc>;
     prepend<S extends Sigil>(s: Sigil): Daslog<LogLevels, [S, ...Chain], LogFunc>;
     reformat<CN extends readonly Sigil[]>(func: (oldFormat: Chain) => CN): Daslog<LogLevels, CN, LogFunc>;
+
+    indent(options?: IndentOptions): Daslog<LogLevels, Chain, LogFunc>;
+    dedent(): Daslog<LogLevels, Chain, LogFunc>;
+    resetIndent(): Daslog<LogLevels, Chain, LogFunc>;
 }
 
-/**
- * Inner marker. Internal use only.
- */
-const META = Symbol('daslog');
 
 /**
  * Create a log4j-style console logger.
@@ -143,6 +165,16 @@ function logFuncs<
 }
 
 /**
+ * Internal Daslog. Aware of the DasMeta object available at [META].
+ */
+type IDaslog<
+    Levels extends string,
+    Chain extends ReadonlyArray<Sigil>,
+    LogFunc extends Func
+> = Daslog<Levels, Chain, LogFunc>
+    & {[META]: DasMeta<Levels, Chain, LogFunc>};
+
+/**
  * Stitch together a logger
  * 
  * @remarks Internal use only.
@@ -153,10 +185,12 @@ function createLogger<
     Levels extends string,
     Chain extends ReadonlyArray<Sigil>,
     LF extends Func
->(meta: DasMeta<Levels, Chain, LF>) {
+>(meta: DasMeta<Levels, Chain, LF>): Daslog<Levels, Chain, LF> {
     return {
         [META]: meta,
-        levels: meta.levels,
+        get levels() {
+            return meta.levels;
+        },
         get threshold() {
             return meta.threshold;
         },
@@ -169,76 +203,111 @@ function createLogger<
 
         ...logFuncs(meta),
         
-        setLevels<NL extends string>(levels: LogLevelRanks<NL>, threshold?: NL) {
+        setLevels(this: IDaslog<Levels, Chain, LF>, levels, threshold) {
             return createLogger({
                 ...this[META],
                 levels,
                 threshold: threshold != undefined ? levels[threshold] : undefined,
             });
         },
-        setThreshold(level: Levels) {
+        setThreshold(this: IDaslog<Levels, Chain, LF>, level) {
             return createLogger({
                 ...this[META],
                 threshold: this[META].levels[level],
             });
         },
-        clearThreshold(){
+        clearThreshold(this: IDaslog<Levels, Chain, LF>){
             return createLogger({
                 ...this[META],
                 threshold: undefined,
             })
         },
-        mute() {
+        mute(this: IDaslog<Levels, Chain, LF>) {
             return createLogger({
                 ...this[META],
                 threshold: Infinity,
             })
         },
-        setAppender<LF extends Func>(appender: () => LF) {
+        setAppender(this: IDaslog<Levels, Chain, LF>, appender) {
             return createLogger({
                 ...this[META],
                 appender,
             });
         },
-        setCategory(category: string, options?: SetCategoryOptions) {
+        setCategory(this: IDaslog<Levels, Chain, LF>, category, options) {
             const {append, reset} = {
                 ...options,
                 ...DEFAULT_CATEGORY_OPTIONS,
             }
+
+            const chain = (append && !this[META].chain.some(s => s.type === 'Category')) 
+            ? [...this[META].chain, Sigil.Category()] 
+            : this[META].chain
 
             return createLogger({
                 ...this[META],
                 category: reset 
                     ? {label: category} 
                     : replaceLastCategory(this[META].category, category),
-                chain: (append && !this[META].chain.some(s => s.type === 'Category')) 
-                    ? [...this[META].chain, Sigil.Category()] 
-                    : this[META].chain,
-            });
+                chain,
+            }) as Daslog<Levels, Chain, LF>;
         },
-        subCategory(category: string) {
+        subCategory(this: IDaslog<Levels, Chain, LF>, category) {
             const cat = this[META].category;
             return createLogger({
                 ...this[META],
                 category: cat ? addCategory(cat, category) : {label: category},
             });
         },
-        append(sigil: Sigil) {
+        append(this: IDaslog<Levels, Chain, LF>, sigil) {
             return createLogger({
                 ...this[META],
                 chain: [...this[META].chain, sigil],
-            });
+            }) as any; // the interface will take care of the typing.
         },
-        prepend(sigil: Sigil) {
+        prepend(this: IDaslog<Levels, Chain, LF>, sigil: Sigil) {
             return createLogger({
                 ...this[META],
                 chain: [sigil, ...this[META].chain],
-            });
+            }) as any; // the interface will take care of the typing.
         },
-        reformat(format: (old: readonly Sigil[]) => readonly Sigil[]) {
+        reformat(this: IDaslog<Levels, Chain, LF>, format) {
             return createLogger({
                 ...this[META],
                 chain: format(this[META].chain),
+            })
+        },
+        indent(this: IDaslog<Levels, Chain, LF>, options) {
+            const characters = options?.spacing ?? '    ';
+            const level = options?.level ?? 1;
+
+            const newIndentLevels = (text: string, levels: number): Indent | undefined =>
+                levels == 0
+                    ? undefined
+                    : {text, sub: newIndentLevels(text, levels - 1)}
+            ;
+
+            const newIndent = newIndentLevels(characters, level);
+            if (newIndent) {
+                return createLogger({
+                    ...this[META],
+                    indent: pushLL(this[META].indent, newIndent),
+                })
+            } else {
+                return this;
+            }
+
+        },
+        dedent(this: IDaslog<Levels, Chain, LF>) {
+            return createLogger({
+                ...this[META],
+                indent: popLL(this[META].indent),
+            })
+        },
+        resetIndent(this: IDaslog<Levels, Chain, LF>) {
+            return createLogger({
+                ...this[META],
+                indent: undefined,
             })
         },
     }

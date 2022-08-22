@@ -1,4 +1,4 @@
-import {Appender} from '../logger';
+import {Appender, indentToString} from '../logger';
 import {SigilConfig, DEFAULT_SIGIL_CONFIG, processSigils} from '../sigil';
 
 /**
@@ -18,16 +18,16 @@ function toStringHackFactory(toStringFunc:() => string) {
  * @param config options to control the rendering of the sigil chain
  */
 export function consoleAppender(config: SigilConfig = DEFAULT_SIGIL_CONFIG): Appender<typeof console['log']> {
-    return (meta, l) => {
+    return (meta, level) => {
         // it looks like a function `() => void` and it is.
         // Its whole purpose is to have .toString() called on it
         // by `console.log` at runtime to get the closest timestamps. 
         const stringInABox = toStringHackFactory(() => processSigils(
             meta.chain,
             config,
-            {...meta, level: l, time: Date.now()}
+            {...meta, level, time: Date.now()}
         ));
-        return console.log.bind(console, ...(meta.chain.length > 0)?['%s', stringInABox]:[]);
+        return console.log.bind(console, ...(meta.chain.length > 0)?['%s', stringInABox]:[], indentToString(meta.indent));
     }
 }
 
